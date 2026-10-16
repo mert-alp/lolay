@@ -6,7 +6,7 @@ import type { CsSession } from './champSelect.ts'
 import { request } from './lcu.ts'
 import { toLane } from './liveRoster.ts'
 import { champPathSlug, slugFromDdragonId } from './lolalytics.ts'
-import { champPool, counterPicks, deriveBan, favorites, findEnemies, rankPicks, rateStrips } from './recommend.ts'
+import { champPool, counterPicks, deriveBan, favoriteVs, favorites, findEnemies, myBanChips, rankPicks, rateStrips } from './recommend.ts'
 import { getStatic } from './services.ts'
 import { updateSettings } from './settings.ts'
 import { getState, setState } from './state.ts'
@@ -128,8 +128,11 @@ export async function recommend(): Promise<DraftRecommendation | null> {
   const enemy = enemyId ? st.champions[enemyId] : undefined
   const vsEnemy = enemy ? await getMatchups(champPathSlug(enemyId!) ?? slugFromDdragonId(enemy.id), lane, tier).catch(() => null) : null
 
+  const favs = favorites(list, points, available, 8)
   return {
-    favorites: favorites(list, points, available, 8),
+    favorites: favs,
+    favoriteVs: favoriteVs(favs, vsEnemy),
+    myBans: myBanChips(getState().settings.banHistory, list, taken, 6),
     picks: rankPicks({ list, available, mastery: points, vsEnemy, limit: 6 }),
     enemyId: enemyId ?? null,
     enemyJungleId,

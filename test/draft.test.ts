@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { derivePhase, deriveTurn } from '../src/main/champSelect.ts'
 import type { CsSession } from '../src/main/champSelect.ts'
-import { champPool, counterPicks, deriveBan, favorites, findEnemies, guessLaner, rankPicks, rateStrips, scorePick } from '../src/main/recommend.ts'
+import { champPool, counterPicks, deriveBan, favorites, favoriteVs, findEnemies, guessLaner, myBanChips, rankPicks, rateStrips, recordBans, scorePick } from '../src/main/recommend.ts'
 import { createCache, parseMatchups, parseTierList } from '../src/main/tierlist.ts'
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
@@ -177,4 +177,47 @@ test('pool: the client lists win, else owned / free (any for a ban) minus taken'
   assert.deepEqual(champPool([5, 6], [7], owned, new Set()), { pickable: [5, 6], bannable: [7] })
   assert.deepEqual(champPool([], null, owned, new Set([4])), { pickable: [1, 2], bannable: [1, 2, 3] })
   assert.deepEqual(champPool(null, null, null, new Set()), { pickable: [], bannable: [] })
+})
+
+const banSession = (...acts: [number, number, boolean, number?][]): CsSession => ({
+  localPlayerCellId: 2,
+  myTeam: [],
+  actions: [acts.map(([id, cell, completed, championId]) => ({ id, actorCellId: cell, type: 'ban', completed, championId }))]
+})
+
+test('recordBans counts my completed bans once, ignores others / open / empty', () => {
+  const seen = new Set<number>()
+  const s = banSession([1, 2, true, 103], [2, 3, true, 5], [3, 2, false, 7], [4, 2, true, 0])
+  assert.deepEqual(recordBans(s, seen, { 103: 2 }), { 103: 3 })
+  assert.equal(recordBans(s, seen, { 103: 3 }), null)
+  assert.deepEqual(recordBans(banSession([1, 2, true, 103], [5, 2, true, 22]), seen, { 103: 3 }), { 103: 3, 22: 1 })
+})
+
+test('recordBans keeps the 40 most banned', () => {
+  const hist: Record<number, number> = {}
+  for (let i = 1; i <= 40; i++) hist[i] = 5
+  const next = recordBans(banSession([1, 2, true, 99]), new Set(), hist)!
+  assert.equal(Object.keys(next).length, 40)
+  assert.equal(next[99], undefined)
+  assert.equal(recordBans(banSession([1, 2, true, 1]), new Set(), hist)![1], 6)
+})
+
+test('recordBans keeps a fresh ban over older ones with the same count', () => {
+  const hist: Record<number, number> = {}
+  for (let i = 1; i <= 40; i++) hist[i] = 1
+  assert.equal(recordBans(banSession([1, 2, true, 999]), new Set(), hist)![999], 1)
+})
+
+test('myBanChips: most banned first, lane row or a no-data chip, taken greyed', () => {
+  const chips = myBanChips({ 103: 5, 999999: 9, 134: 1 }, list, new Set([134]), 2)
+  assert.deepEqual(chips.map((c) => c.championId), [999999, 103])
+  assert.equal(chips[0].none, true)
+  assert.equal(chips[1].tier, 'S')
+  assert.equal(myBanChips({ 103: 5, 134: 1 }, list, new Set([134]), 6)[1].out, true)
+})
+
+test('favoriteVs: 100 - enemy wr, only with enough games', () => {
+  const m = { 1: { wr: 45, n: 300 }, 2: { wr: 60, n: 10 } } as any
+  assert.deepEqual(favoriteVs([1, 2, 3], m), { 1: 55 })
+  assert.deepEqual(favoriteVs([1], null), {})
 })

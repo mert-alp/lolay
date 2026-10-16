@@ -24,6 +24,7 @@ export function initState() {
     readyCheck: null,
     champSelect: null,
     live: null,
+    overlay: null,
     settings: getSettings(),
     lang: 'en',
     tier: 'all',

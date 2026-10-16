@@ -91,6 +91,9 @@ test('collectRunePages orders matchup, stats, pro; dedupes by perks; labels', as
   assert.equal(new Set(value.map((p) => [...p.perks].sort().join())).size, value.length)
   assert.ok(value.length <= 6)
   assert.ok(value.some((p) => p.label === 'En Çok Seçilen' && p.source === 'lolalytics'))
+  const vsPages = value.filter((p) => / vs /.test(p.label ?? ''))
+  assert.ok(vsPages.every((p) => p.vs === (/Zed/.test(p.label!) ? 238 : 64)))
+  assert.ok(value.filter((p) => !/ vs /.test(p.label ?? '')).every((p) => p.vs === undefined))
 })
 
 test('collectRunePages without enemies has no matchup pages; a failing source marks the result partial', async () => {

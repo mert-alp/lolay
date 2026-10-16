@@ -82,6 +82,43 @@ export function deriveBan(session: CsSession): { banActionId: number | null; myB
   return { banActionId: open?.id ?? null, myBanTurn: !!open?.isInProgress }
 }
 
+const MAX_BAN_HISTORY = 40
+
+// count my completed bans once each (seen = action ids already counted); null when nothing new
+export function recordBans(session: CsSession, seen: Set<number>, history: Record<number, number>): Record<number, number> | null {
+  let next: Record<number, number> | null = null
+  const added: number[] = []
+  for (const a of (session.actions ?? []).flat()) {
+    if (a.actorCellId !== session.localPlayerCellId || a.type !== 'ban' || !a.completed || typeof a.id !== 'number' || seen.has(a.id) || !isId(a.championId)) continue
+    seen.add(a.id)
+    next ??= { ...history }
+    next[a.championId] = (next[a.championId] ?? 0) + 1
+    added.push(a.championId)
+  }
+  if (!next) return null
+  const fresh = new Set(added)
+  const top = Object.entries(next).sort((a, b) => b[1] - a[1] || +fresh.has(+b[0]) - +fresh.has(+a[0])).slice(0, MAX_BAN_HISTORY)
+  return Object.fromEntries(top)
+}
+
+// the champions I ban most, as chips (zero chip when the lane has no data for it); taken ones are greyed
+export function myBanChips(history: Record<number, number>, list: TierList, taken: Set<number>, n: number): DraftChamp[] {
+  return Object.entries(history).sort((a, b) => b[1] - a[1]).slice(0, n).map(([id]) => {
+    const r = list[+id]
+    return r ? chip(r, taken.has(+id)) : { ...none(+id), out: taken.has(+id) }
+  })
+}
+
+// favorite -> its win rate against the enemy laner (vsEnemy holds the enemy's win rate, so 100 - wr), enough games only
+export function favoriteVs(favs: number[], vsEnemy: Matchups | null | undefined): Record<number, number> {
+  const out: Record<number, number> = {}
+  for (const id of favs) {
+    const m = vsEnemy?.[id]
+    if (m && m.n >= MIN_COUNTER_GAMES) out[id] = +(100 - m.wr).toFixed(1)
+  }
+  return out
+}
+
 const isId = (n: unknown): n is number => Number.isInteger(n) && (n as number) > 0
 
 // What I can still pick / ban. The client's own lists are exact but empty outside my turn; then rebuild them:
@@ -95,6 +132,7 @@ export function champPool(pickable: unknown, bannable: unknown, owned: unknown, 
   return { pickable: p.length ? p : rebuilt(true), bannable: b.length ? b : rebuilt(false) }
 }
 
+const none = (id: number): DraftChamp => ({ championId: id, tier: '', wr: 0, pr: 0, br: 0, out: false, none: true })
 const chip = (r: TierRow, out: boolean): DraftChamp => ({ championId: r.championId, tier: r.tier, wr: r.wr, pr: r.pr, br: r.br, out })
 
 // watchlist / most played / most banned in my lane. Watchlist and most played only list what I can pick;
@@ -104,7 +142,7 @@ export function rateStrips(list: TierList, available: Set<number>, taken: Set<nu
   const top = (key: 'pr' | 'br', rows: TierRow[]) => [...rows].sort((a, b) => b[key] - a[key]).slice(0, n)
   const watch: DraftChamp[] = watchlist.filter((id) => available.has(id)).map((id) => {
     const r = list[id]
-    return r && r.pctLane >= MIN_LANE_SHARE ? chip(r, false) : { championId: id, tier: '', wr: 0, pr: 0, br: 0, out: false, none: true }
+    return r && r.pctLane >= MIN_LANE_SHARE ? chip(r, false) : none(id)
   })
   return {
     watch,

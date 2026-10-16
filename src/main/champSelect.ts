@@ -5,7 +5,7 @@ export interface CsSession {
   localPlayerCellId: number
   myTeam: { cellId: number; championId: number; championPickIntent: number; assignedPosition: string; spell1Id?: number; spell2Id?: number }[]
   theirTeam?: { championId: number; assignedPosition?: string }[]
-  actions: { id?: number; actorCellId: number; type: string; completed: boolean; isInProgress?: boolean }[][]
+  actions: { id?: number; actorCellId: number; type: string; completed: boolean; championId?: number; isInProgress?: boolean }[][]
 }
 
 export interface Selection {

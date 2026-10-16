@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Lane, RunePage, Settings, StaticData } from '@shared/types'
+import { champIcon, type Lane, type RunePage, type Settings, type StaticData } from '@shared/types'
 import { isComplete, pageTitle, perksOf } from '@shared/runes'
 import { useLang, useT, type Key, type TFn } from '../i18n'
 import { fmtGames, fmtPct, wrColor } from '../util'
@@ -13,6 +13,21 @@ export type Status = '' | 'saving' | 'ok' | 'err'
 export function saveRunePref(settings: Settings, key: string, perks: number[] | null) {
   const { [key]: _old, ...rest } = settings.runePrefs
   void window.lolay.setSettings({ runePrefs: perks ? { ...rest, [key]: perks } : rest })
+}
+
+// "[mine] vs [enemy]" icons of a matchup page
+function Vs({ page, mine, st }: { page: RunePage; mine: number; st: StaticData }) {
+  const a = st.champions[mine]
+  const b = page.vs ? st.champions[page.vs] : undefined
+  if (!a || !b) return null
+  const cls = 'size-[18px] shrink-0 rounded-full object-cover ring-1'
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1" aria-hidden>
+      <img src={champIcon(st.version, a.id)} alt="" draggable={false} className={`${cls} ring-line`} />
+      <span className="text-[10px] font-medium text-mute">vs</span>
+      <img src={champIcon(st.version, b.id)} alt="" draggable={false} className={`${cls} ring-loss/60`} />
+    </span>
+  )
 }
 
 function Result({ wr }: { wr: number }) {
@@ -40,6 +55,7 @@ function StatusText({ status }: { status: Status }) {
 interface CardProps {
   title: string
   page: RunePage
+  championId: number
   st: StaticData
   editKey: string // champion + lane + page index: where the edited page is remembered
   onApply?: (perks: number[]) => void // no button outside champ select
@@ -50,13 +66,13 @@ interface CardProps {
   hideStats?: boolean // numbers would repeat another page's
 }
 
-export function RunePageCard({ title, page, st, editKey, onApply, onEdit, status, revert, caption, hideStats }: CardProps) {
+export function RunePageCard({ title, page, championId, st, editKey, onApply, onEdit, status, revert, caption, hideStats }: CardProps) {
   const t = useT()
   const ed = useRuneEdit(editKey, page.perks, st)
   return (
     <Card className="flex flex-col p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="flex min-w-0 items-center gap-2 text-[14px] font-semibold"><span className="truncate">{title}</span>{page.low && <Low />}</h3>
+        <h3 className="flex min-w-0 items-center gap-2 text-[14px] font-semibold"><Vs page={page} mine={championId} st={st} /><span className="truncate">{title}</span>{page.low && <Low />}</h3>
         {ed.edited ? (
           <span className="rounded-full border border-gold/40 bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold text-gold">{t('runes.edited')}</span>
         ) : hideStats || !page.n ? (
@@ -131,7 +147,7 @@ function ago(when: number, lang: string) {
   return Math.abs(days) < 1 ? f.format(Math.round((when - Date.now()) / 36e5), 'hour') : f.format(days, 'day')
 }
 
-function PageItem({ p, name, on, st, hideStats, pick }: { p: RunePage; name: string; on: boolean; st: StaticData; hideStats: boolean; pick: () => void }) {
+function PageItem({ p, name, on, st, mine, hideStats, pick }: { p: RunePage; mine: number; name: string; on: boolean; st: StaticData; hideStats: boolean; pick: () => void }) {
   const t = useT()
   const lang = useLang()
   const ks = st.runes[p.perks[0]]
@@ -157,6 +173,7 @@ function PageItem({ p, name, on, st, hideStats, pick }: { p: RunePage; name: str
       </Tip>
       <span className="min-w-0 flex-1 leading-tight">
         <span className="flex items-center gap-1.5">
+          <Vs page={p} mine={mine} st={st} />
           <span className={`truncate text-[13px] font-semibold ${on ? 'text-fg' : 'text-fg/90'}`}>{name}</span>
           {isPro(p) && <span className="shrink-0 rounded border border-gold/40 px-1 text-[9px] font-bold tracking-wider text-gold">{t('runes.pro')}</span>}
           {p.low && <Low />}
@@ -294,7 +311,7 @@ export function RuneSection({ pages: base, championId, lane, vsLaner, vsJungler,
             className="grid max-h-[420px] min-w-0 flex-[1_1_230px] content-start gap-2 overflow-y-auto pr-1 [grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr))]"
           >
             {order.map((e) => (
-              <PageItem key={e.key} p={e.page} name={pageName(e.page, e.orig, keystone, t, st)} on={e === cur} st={st} hideStats={hide(e)} pick={() => select(e)} />
+              <PageItem key={e.key} mine={championId} p={e.page} name={pageName(e.page, e.orig, keystone, t, st)} on={e === cur} st={st} hideStats={hide(e)} pick={() => select(e)} />
             ))}
           </div>
         )}
@@ -303,6 +320,7 @@ export function RuneSection({ pages: base, championId, lane, vsLaner, vsJungler,
             key={cur.key}
             title={pageName(cur.page, cur.orig, keystone, t, st)}
             page={cur.page}
+            championId={championId}
             st={st}
             editKey={keyOf(cur)}
             caption={keystone ? t('runes.keystoneWr') : undefined}

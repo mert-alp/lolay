@@ -78,7 +78,7 @@ export async function collectRunePages(q: RunePagesQuery, d: RunePagesDeps, lang
       ])
       const label = `${nameOf(q.championId)} vs ${nameOf(e.id)}${e.lane === q.lane ? '' : ` (${LANE_NAME[lang][e.lane]})`}`
       const top = opggTopPage(op)
-      return [...lola.map((p, i) => ({ ...p, source: 'lolalytics' as const, label: i ? `${label} · WR` : label })), ...(top ? [{ ...top, label }] : [])]
+      return [...lola.map((p, i) => ({ ...p, vs: e.id, source: 'lolalytics' as const, label: i ? `${label} · WR` : label })), ...(top ? [{ ...top, vs: e.id, label }] : [])]
     })
   ])
 

@@ -1,7 +1,7 @@
 import { onChampSelect, resetChampSelect, setMapId } from './champSelectFlow.ts'
 import * as lcu from './lcu.ts'
 import { onLiveChampSelect, onLiveGameflow, onLivePhase, resetLive } from './liveMatch.ts'
-import { onReadyCheck, resetReadyCheck } from './readyCheck.ts'
+import { onReadyCheck, resetReadyCheck, setQueueName } from './readyCheck.ts'
 import { getState, setClientLocale, setState } from './state.ts'
 import { showWindowInactive } from './win.ts'
 
@@ -46,12 +46,15 @@ function setPhase(data: unknown) {
 }
 
 const mapOf = (session: any) => Number(session?.gameData?.queue?.mapId) || 0
+const queueOf = (session: any): string | undefined => session?.gameData?.queue?.description || session?.gameData?.queue?.shortName || undefined
 
 async function onConnect() {
   setState({ lcu: 'connected' })
   setClientLocale((await get('/riotclient/region-locale'))?.locale ?? null)
   await loadSummoner()
-  setMapId(mapOf(await get('/lol-gameflow/v1/session')))
+  const flow = await get('/lol-gameflow/v1/session')
+  setMapId(mapOf(flow))
+  setQueueName(queueOf(flow))
   setPhase(await get('/lol-gameflow/v1/gameflow-phase'))
   const rc = await get('/lol-matchmaking/v1/ready-check')
   if (rc) onReadyCheck(rc)
@@ -61,7 +64,7 @@ async function onConnect() {
 
 function onDisconnect() {
   resetReadyCheck()
-  resetChampSelect()
+  resetChampSelect(true)
   resetLive()
   setMapId(0)
   setState({ lcu: 'disconnected', summoner: null, phase: 'None' })
@@ -73,6 +76,7 @@ export function startSession() {
   lcu.subscribe('/lol-gameflow/v1/gameflow-phase', (data, type) => setPhase(type === 'Delete' ? null : data))
   lcu.subscribe('/lol-gameflow/v1/session', (data, type) => {
     setMapId(type === 'Delete' ? 0 : mapOf(data))
+    setQueueName(type === 'Delete' ? undefined : queueOf(data))
     onLiveGameflow(data, type)
   })
   lcu.subscribe('/lol-matchmaking/v1/ready-check', onReadyCheck)

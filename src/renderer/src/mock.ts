@@ -155,6 +155,8 @@ const POOL = Array.from({ length: 900 }, (_, i) => i + 1)
 const REC: DraftRecommendation = {
   watch: [rate(103, 'S', 52.9, 9.6, 4.3), rate(238, 'A+', 51.2, 12.1, 21.4), { ...rate(157, '', 0, 0, 0), none: true }],
   popular: [rate(238, 'A+', 51.2, 12.1, 21.4), rate(103, 'S', 52.9, 9.6, 4.3), rate(134, 'A+', 52.6, 8.4, 3.1), rate(112, 'S', 52.2, 7.9, 1.2), rate(7, 'A+', 52.4, 7.1, 6.8), rate(61, 'C-', 50.3, 6.5, 0.6), rate(84, 'B+', 50.9, 6.1, 9.9), rate(69, 'B', 50.5, 5.2, 2.4)],
+  myBans: [rate(157, 'B', 49.9, 4.8, 33.5), rate(238, 'A+', 51.2, 12.1, 21.4), rate(84, 'B+', 50.9, 6.1, 9.9, true)],
+  favoriteVs: { 103: 53.4, 61: 48.7, 134: 51.9 },
   banned: [rate(157, 'B', 49.9, 4.8, 33.5), rate(238, 'A+', 51.2, 12.1, 21.4), rate(91, 'A', 52.0, 3.7, 19.8, true), rate(84, 'B+', 50.9, 6.1, 9.9, true), rate(7, 'A+', 52.4, 7.1, 6.8), rate(103, 'S', 52.9, 9.6, 4.3), rate(134, 'A+', 52.6, 8.4, 3.1), rate(69, 'B', 50.5, 5.2, 2.4)],
   banActionId: null,
   myBanTurn: false,
@@ -170,7 +172,7 @@ export function installMock() {
     lang: null, tierOverride: null, source: 'lolalytics',
     autoImport: { runes: true, spells: true, items: true },
     autoAccept: false, autoAcceptDelay: 2, flashOn: 'F', startWithWindows: false,
-    watchlist: [103, 238, 157], spellPrefs: {}, runePrefs: {}
+    watchlist: [103, 238, 157], spellPrefs: {}, runePrefs: {}, banHistory: { 157: 6, 238: 4, 84: 2 }, overlay: true, overlaySkill: true, overlayRoute: true, overlayMap: 280, overlayPos: {}
   }
   const listeners = new Set<(s: AppState) => void>()
   let picked = 0 // champion hovered through the mock API
@@ -184,7 +186,8 @@ export function installMock() {
       lcu: cs || live || h.includes('readycheck') || h.includes('connected') ? 'connected' : 'disconnected',
       summoner: h.includes('connected') || cs || live || h.includes('readycheck') ? { name: 'Schelter', iconId: 1, soloTier: 'EMERALD', soloDivision: 'IV' } : null,
       phase: h.includes('readycheck') ? 'ReadyCheck' : cs ? 'ChampSelect' : live ? live.phase : 'None',
-      readyCheck: h.includes('readycheck') ? { playerResponse: 'None', timer: 2, autoAcceptAt: Date.now() + 3200 } : null,
+      readyCheck: h.includes('readycheck') ? { playerResponse: 'None', timer: 2, autoAcceptAt: Date.now() + 3200, queue: 'Dereceli Tek/Çift', bgChampionId: 103 } : null,
+      overlay: h.includes('overlay') ? { championId: 64, skill: 'Q', route: ['RAPTORS', 'RED', 'KRUG', 'WOLVES', 'BLUE', 'GROMP'], side: 'BLUE', gameTime: 95 } : null,
       live,
       champSelect: cs
         ? h.includes('locked')
@@ -211,7 +214,7 @@ export function installMock() {
       const runes = ahri(q.lane, settings.source).runes
       if (!q.vsLaner) return runes
       const names = (await loadStatic(state().lang)).champions
-      return [{ ...stat(54.1, 1636), label: `${names[q.championId]?.name} vs ${names[q.vsLaner]?.name}`, source: 'lolalytics', perks: [8128, 8143, 8140, 8135, 8347, 8304, 5005, 5008, 5001] }, ...runes]
+      return [{ ...stat(54.1, 1636), label: `${names[q.championId]?.name} vs ${names[q.vsLaner]?.name}`, vs: q.vsLaner, source: 'lolalytics', perks: [8128, 8143, 8140, 8135, 8347, 8304, 5005, 5008, 5001] }, ...runes]
     },
     getMeta: (q) => metaMock(q, state().lang),
     applyBuild: async () => ({ runes: 'ok', spells: 'ok', items: 'ok' }),
@@ -219,6 +222,7 @@ export function installMock() {
     setSettings: async (p) => { settings = { ...settings, ...p }; emit(); return settings },
     onBuildRefreshed: () => () => {},
     windowControl: () => {},
+    overlayMouse: () => {},
     draftRecommend: async () => { await new Promise((r) => setTimeout(r, 300)); return location.hash.includes('champselect-ban') ? { ...REC, banActionId: 3, myBanTurn: true } : REC },
     searchPlayers: mockSearch,
     profileGet: mockProfileGet,

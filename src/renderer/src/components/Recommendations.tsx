@@ -107,7 +107,7 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
           title={c.out ? t('draft.banTaken') : banning ? t('draft.banHint') : ic.c.name}
           onClick={banning && !c.out ? () => onChoose(c.championId) : undefined}
         >
-          <span className={c.out ? '' : 'text-loss'}>{rate('BR', c.br)}</span>
+          {c.none ? <span className="whitespace-normal text-[9px] leading-[11px]">{t('draft.noLaneData')}</span> : <span className={c.out ? '' : 'text-loss'}>{rate('BR', c.br)}</span>}
         </Tile>
       )
     }
@@ -158,31 +158,50 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
     </section>
   )
 
-  return (
-    <div className="space-y-4">
-      {counterSection}
+  const banMode = banning || rec?.banActionId != null // ban phase: only ban material, no picks yet
+  const favSection = (
       <section>
-        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.favs')}</h3>
+        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.myChamps')}</h3>
         <div className="flex min-h-11 flex-wrap items-center gap-2">
           {rec ? rec.favorites.map((id) => {
             const ic = icon(id)
+            const vs = rec.favoriteVs?.[id]
             return ic && (
               <button
                 key={id}
                 onClick={() => onChoose(id)}
-                title={ic.c.name}
-                className={`no-drag size-11 overflow-hidden rounded-xl border transition-all duration-150 hover:scale-105 hover:border-gold/70 ${id === sel ? 'border-gold shadow-[0_0_14px_-2px_rgba(200,170,110,.7)]' : 'border-line'}`}
+                title={vs != null && enemy ? `${ic.c.name} · ${t('draft.favVs').replace('{name}', enemy.c.name).replace('{wr}', fmtPct(vs))}` : ic.c.name}
+                className={`no-drag relative size-11 rounded-xl border transition-all duration-150 hover:scale-105 hover:border-gold/70 ${id === sel ? 'border-gold shadow-[0_0_14px_-2px_rgba(200,170,110,.7)]' : 'border-line'}`}
               >
-                <img src={ic.src} alt={ic.c.name} draggable={false} className="size-full object-cover" />
+                <img src={ic.src} alt={ic.c.name} draggable={false} className="size-full rounded-[11px] object-cover" />
+                {vs != null && <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border border-line bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold ${wrColor(vs)}`}>{fmtPct(vs)}</span>}
               </button>
             )
           }) : Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton size-11 !rounded-xl" />)}
         </div>
       </section>
-
+  )
+  const strips = (
+    <>
       <Strip title={t('draft.watch')} items={rec?.watch} empty={t('draft.watchHint')} tile={tile('watch')} />
       <Strip title={t('draft.popular')} items={rec?.popular} tile={tile('popular')} />
-      <Strip title={t('draft.mostBanned')} items={rec?.banned} tile={tile('banned')} />
+    </>
+  )
+
+  if (banMode)
+    return (
+      <div className="space-y-4">
+        <Strip title={t('draft.myBans')} items={rec?.myBans} empty={t('draft.myBansHint')} tile={tile('banned')} />
+        <Strip title={t('draft.mostBanned')} items={rec?.banned} tile={tile('banned')} />
+        {strips}
+      </div>
+    )
+
+  return (
+    <div className="space-y-4">
+      {favSection}
+      {counterSection}
+      {strips}
 
       <section>
         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">

@@ -1,19 +1,21 @@
 # Lolay
 
-Kişisel kullanım için League of Legends client yardımcısı (Electron). Blitz / OP.GG benzeri, oyun içi overlay olmadan; build verisini varsayılan olarak **Lolalytics**'ten çeker.
+Kişisel kullanım için League of Legends client yardımcısı (Electron). Blitz / OP.GG benzeri; build verisini varsayılan olarak **Lolalytics**'ten çeker.
 
 ## Özellikler
 
-- **Kabul ekranı** – maç bulununca pencere öne gelir; Kabul / Reddet, isteğe bağlı gecikmeli otomatik kabul. Client'tan kabul edilirse uygulamadaki ekran da kapanır.
+- **Kabul ekranı** – maç bulununca pencere öne gelir; kuyruk adı ve geri sayımla Kabul (Enter) / Reddet (Esc), isteğe bağlı gecikmeli otomatik kabul. Client'tan kabul edilirse uygulamadaki ekran da kapanır.
 - **Draft ekranı** (champ select'te otomatik açılır)
-  - Öneriler: favori seçimler, rakip laner'a karşı counter pick'ler, kişiselleştirilmiş öneriler, takip listesi, en çok oynanan / banlanan şampiyonlar
+  - Ban fazında en çok banladığın şampiyonlar (uygulama banlarını kaydeder) ve lane'de en çok banlananlar
+  - Öneriler: kendi şampiyonların (rakip laner'a karşı WR ile), rakip laner'a karşı counter pick'ler, kişiselleştirilmiş öneriler, takip listesi, en çok oynanan / banlanan şampiyonlar
   - Tüm şampiyonlar seçicisi: arama + lane filtresi, programdan **hover / kilitle / banla**
-  - Build sekmesi: rün sayfaları (en çok seçilen, en yüksek WR, keystone varyantları, "Ekko vs Vi" eşleşme sayfaları, pro oyuncu sayfaları), doğrudan tıklanarak düzenlenen rünler, D ⇄ F spell kontrolü, eşyalar, skill sırası
+  - Build sekmesi: rün sayfaları (en çok seçilen, en yüksek WR, keystone varyantları, "Ekko vs Vi" eşleşme sayfaları (şampiyon ikonlarıyla), pro oyuncu sayfaları), doğrudan tıklanarak düzenlenen rünler, D ⇄ F spell kontrolü, eşyalar, skill sırası
   - Takım kartları (rank, WR, mastery, son maçlar, Autofill / OTP etiketleri), takım hasar dağılımı, banlar
   - Seçimler champ select'te otomatik client'a uygulanır; Flash tuşu ve şampiyon/lane bazında rün & spell tercihleri hatırlanır
 - **Şampiyon sayfası** – build, rün / eşya / spell açıklamaları (LoL tooltip'leri), counter'lar, lane ve rank filtresi
 - **Meta** – lane bazında tier listesi, yükselenler / düşenler, ★ takip listesi
 - **Maç** – canlı maç oyuncu kartları
+- **Oyun içi overlay** – skill puanın olduğunda hangi skill'i açacağını gösterir; jungle'da OP.GG'den şampiyona özel ilk rota. Oyunu **Borderless** veya Pencere modunda açmalısın (tam ekranda görünmez); Ayarlar'dan kapatılabilir
 - **Profil** – rank kartları, son maç istatistikleri, karşılaşma geçmişi + maç detayı, çok bölgeli oyuncu arama (Ctrl+K)
 - TR / EN arayüz, rank otomatik algılama, sistem tepsisinde çalışma, 380 px'den geniş ekranlara responsive tasarım
 

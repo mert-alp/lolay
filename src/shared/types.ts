@@ -34,6 +34,7 @@ export interface RunePage extends Stat {
   low?: true // matchup page from a small sample: shown, never the default
   source?: Source | 'pro' // 'pro' = a page played by a pro player
   player?: { name: string; team?: string; region?: string; when?: number } // when = epoch ms of the game
+  vs?: number // matchup page: the enemy championId it was built against
 }
 export interface ItemStat extends Stat {
   id: number
@@ -159,6 +160,12 @@ export interface Settings {
   watchlist: number[] // champion ids starred on the Meta page
   spellPrefs: Record<string, [number, number]> // the user's own spell pair per `${championId}:${lane}`, D then F
   runePrefs: Record<string, number[]> // the user's own rune page (9 perks) per `${championId}:${lane}`
+  banHistory: Record<number, number> // championId -> how many times I banned it (my completed ban actions)
+  overlay: boolean // in-game overlay (skill reminder, jungle path); needs Borderless/Windowed
+  overlaySkill: boolean // overlay part: skill level-up reminder
+  overlayRoute: boolean // overlay part: jungle path
+  overlayMap: number // in-game minimap width in px (depends on HUD/minimap scale); the path panel sits just left of it
+  overlayPos: Partial<Record<OverlayPanel, [number, number]>> // panels the user dragged: top-left corner in px; absent = default spot
 }
 
 // Meta page: one Lolalytics tier list row, plus the change against the previous patch when it was reachable
@@ -209,6 +216,8 @@ export interface ReadyCheckState {
   playerResponse: 'None' | 'Accepted' | 'Declined' | string
   timer: number // seconds elapsed (LCU)
   autoAcceptAt: number | null // epoch ms when auto-accept fires, null = not scheduled/cancelled
+  queue?: string // queue name from the gameflow session, e.g. "Ranked Solo/Duo"
+  bgChampionId?: number // my top mastery champion, drawn as the backdrop
 }
 
 export interface ChampSelectState {
@@ -269,6 +278,18 @@ export interface LiveMatchState {
   riotInvalid?: true // the Riot API key was rejected: enemy stats are unavailable
 }
 
+export type Skill = 'Q' | 'W' | 'E' | 'R'
+export type OverlayPanel = 'skill' | 'route'
+export type Camp = 'BLUE' | 'GROMP' | 'WOLVES' | 'RAPTORS' | 'RED' | 'KRUG' | string // OP.GG camp names
+// in-game overlay, fed from the Live Client Data API every second
+export interface OverlayState {
+  championId: number
+  skill: Skill | null // the skill to level now; null = no unspent point or unsure
+  route: Camp[] | null // my most played clear for my side (jungle only)
+  side: 'BLUE' | 'RED'
+  gameTime: number // seconds
+}
+
 export interface AppState {
   lcu: 'disconnected' | 'connected'
   summoner: { name: string; iconId: number; soloTier: string | null; soloDivision: string | null } | null
@@ -276,6 +297,7 @@ export interface AppState {
   readyCheck: ReadyCheckState | null // non-null only while a ready check is in progress
   champSelect: ChampSelectState | null
   live: LiveMatchState | null // non-null from champ select until the game ends
+  overlay: OverlayState | null // non-null while in game with the overlay on
   settings: Settings
   lang: Lang // effective language
   tier: Tier // effective Lolalytics tier
@@ -341,6 +363,8 @@ export interface DraftRecommendation {
   watch: DraftChamp[] // my watchlist, pickable ones only
   popular: DraftChamp[] // most picked in my lane, pickable ones only
   banned: DraftChamp[] // most banned in my lane; `out` ones are shown greyed
+  myBans: DraftChamp[] // the champions I ban most (settings.banHistory), most first; `out` ones are shown greyed
+  favoriteVs: Record<number, number> // favorite championId -> its win rate against the enemy laner (enough games only)
   banActionId: number | null // my unfinished ban action; null = no ban to make
   myBanTurn: boolean // that action is in progress
 }
@@ -476,6 +500,7 @@ export interface LolayApi {
   readyCheck(action: 'accept' | 'decline' | 'cancelAuto'): Promise<void>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   windowControl(action: 'minimize' | 'maximize' | 'hide'): void
+  overlayMouse(interactive: boolean): void // overlay window: catch the mouse (over a panel header) or let it through to the game
   draftRecommend(): Promise<DraftRecommendation | null> // null = not in champ select / no lane
   searchPlayers(q: SearchQuery): Promise<SearchResponse>
   profileGet(q: 'me' | ProfileQuery): Promise<ProfileResult<Profile>>
@@ -500,6 +525,7 @@ export const IPC = {
   readyCheck: 'readycheck:action',
   setSettings: 'settings:set',
   windowControl: 'window:control',
+  overlayMouse: 'overlay:mouse',
   riotStatus: 'riot:status',
   riotReload: 'riot:reload',
   draftRecommend: 'draft:recommend',

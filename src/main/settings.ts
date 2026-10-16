@@ -15,7 +15,13 @@ const defaults: Settings = {
   startWithWindows: true,
   watchlist: [],
   spellPrefs: {},
-  runePrefs: {}
+  runePrefs: {},
+  banHistory: {},
+  overlay: true,
+  overlaySkill: true,
+  overlayRoute: true,
+  overlayMap: 280,
+  overlayPos: {}
 }
 
 export const startHidden = process.argv.includes('--hidden')
@@ -31,6 +37,12 @@ export function loadSettings(): Settings {
     if (!Array.isArray(current.watchlist)) current.watchlist = []
     current.spellPrefs = cleanPrefs(saved.spellPrefs, okSpellPair)
     current.runePrefs = cleanPrefs(saved.runePrefs, okRunePage)
+    const bans = saved.banHistory
+    current.banHistory = bans && typeof bans === 'object' && !Array.isArray(bans) ? Object.fromEntries(Object.entries(bans).filter(([id, n]) => +id > 0 && Number.isInteger(n) && (n as number) > 0)) as Record<number, number> : {}
+    for (const k of ['overlay', 'overlaySkill', 'overlayRoute'] as const) if (typeof current[k] !== 'boolean') current[k] = defaults[k]
+    const pos = saved.overlayPos
+    current.overlayPos = Object.fromEntries(['skill', 'route'].filter((k) => Array.isArray(pos?.[k]) && pos[k].length === 2 && pos[k].every(Number.isFinite)).map((k) => [k, pos[k]]))
+    if (!Number.isFinite(current.overlayMap) || current.overlayMap < 120 || current.overlayMap > 600) current.overlayMap = defaults.overlayMap
   } catch {
     current = defaults
   }

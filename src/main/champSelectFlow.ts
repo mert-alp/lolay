@@ -4,6 +4,7 @@ import { applyBuild } from './apply.ts'
 import { derivePhase, deriveSelection, deriveTurn, selectionKey } from './champSelect.ts'
 import type { CsSession, Selection } from './champSelect.ts'
 import { enemiesOf } from './draftActions.ts'
+import { recordBans } from './recommend.ts'
 import { defaultRunePerks, getBuild } from './services.ts'
 import { getSettings, updateSettings } from './settings.ts'
 import { getState, setState } from './state.ts'
@@ -19,6 +20,7 @@ let failedKey: string | null = null // ... and failed
 let importingKey: string | null = null // ... and still running
 let result: { key: string; parts: NonNullable<ChampSelectState['importResult']> } | null = null // per-part outcome
 let prefetchKey = ''
+let seenBans = new Set<number>() // my ban action ids already counted
 let watch: SpellWatch = { seen: null, ours: null }
 
 export function setMapId(id: number) {
@@ -30,13 +32,17 @@ export function onChampSelect(data: CsSession | null, eventType = 'Update') {
   if (eventType === 'Delete' || !data) return resetChampSelect()
   session = data
   trackSpells(data)
+  const banHistory = recordBans(data, seenBans, getSettings().banHistory)
+  if (banHistory) setState({ settings: updateSettings({ banHistory }) })
   refresh()
 }
 
-export function resetChampSelect() {
+// keepBans: the LCU dropped, the same champ select may come back with the same completed bans
+export function resetChampSelect(keepBans = false) {
   session = null
   appliedKey = importedKey = failedKey = importingKey = result = null
   prefetchKey = ''
+  if (!keepBans) seenBans = new Set()
   watch = { seen: null, ours: null }
   setState({ champSelect: null })
 }

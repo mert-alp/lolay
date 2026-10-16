@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { AppState, Lang, Settings as S } from '@shared/types'
 import { useT } from '../i18n'
-import { Card, Eyebrow, Segmented, Select, Slider, Toggle } from '../components/ui'
+import { Button, Card, Eyebrow, Segmented, Select, Slider, Toggle } from '../components/ui'
 import { SourcePicker } from '../components/SourcePicker'
 import { TierSelect } from '../components/TierSelect'
 
@@ -24,6 +24,8 @@ export function Settings({ state }: { state: AppState }) {
   const imp = (k: keyof S['autoImport'], v: boolean) => set({ autoImport: { ...s.autoImport, [k]: v } })
   const [delay, setDelay] = useState(s.autoAcceptDelay)
   useEffect(() => setDelay(s.autoAcceptDelay), [s.autoAcceptDelay])
+  const [mapW, setMapW] = useState(s.overlayMap)
+  useEffect(() => setMapW(s.overlayMap), [s.overlayMap])
 
   return (
     <div className="mx-auto max-w-[760px] space-y-5 sm:space-y-6">
@@ -73,6 +75,41 @@ export function Settings({ state }: { state: AppState }) {
               <span className="w-14 text-right text-[14px] font-semibold text-gold">{delay.toFixed(1)} {t('rc.sec')}</span>
             </div>
           </Row>
+        </Card>
+      </div>
+
+      <div>
+        <Eyebrow>{t('settings.overlayCard')}</Eyebrow>
+        <Card>
+          <Row title={t('settings.overlay')} desc={t('settings.overlayHint')}>
+            <Toggle checked={s.overlay} label={t('settings.overlay')} onChange={(v) => set({ overlay: v })} />
+          </Row>
+          <div className={s.overlay ? '' : 'pointer-events-none opacity-50'}>
+            <Row title={t('settings.overlaySkill')} desc={t('settings.overlaySkillHint')}>
+              <Toggle checked={s.overlaySkill} label={t('settings.overlaySkill')} onChange={(v) => set({ overlaySkill: v })} />
+            </Row>
+            <Row title={t('settings.overlayRoute')} desc={t('settings.overlayRouteHint')}>
+              <Toggle checked={s.overlayRoute} label={t('settings.overlayRoute')} onChange={(v) => set({ overlayRoute: v })} />
+            </Row>
+            <Row title={t('settings.overlayMap')} desc={t('settings.overlayMapHint')}>
+              <div className="flex items-center gap-4">
+                <Slider
+                  label={t('settings.overlayMap')}
+                  min={180}
+                  max={420}
+                  step={10}
+                  value={mapW}
+                  onChange={(v) => { setMapW(v); set({ overlayMap: v }) }}
+                />
+                <span className="w-16 text-right text-[14px] font-semibold text-gold">{mapW} px</span>
+              </div>
+            </Row>
+            <Row title={t('settings.overlayReset')} desc={t('settings.overlayResetHint')}>
+              <Button variant="ghost" className="px-3 py-1.5" disabled={!Object.keys(s.overlayPos).length} onClick={() => set({ overlayPos: {} })}>
+                {t('settings.overlayReset')}
+              </Button>
+            </Row>
+          </div>
         </Card>
       </div>
 
