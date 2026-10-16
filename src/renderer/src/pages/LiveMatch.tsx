@@ -58,12 +58,6 @@ export function LiveMatch({ state, st }: { state: AppState; st: StaticData | nul
           </span>
         )}
       </div>
-      {live.riotInvalid && (
-        <div role="status" className="mb-4 flex items-start gap-2.5 rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/[.07] px-3.5 py-2 text-[12.5px] text-[#fbbf24]">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
-          {t('live.riotInvalid')}
-        </div>
-      )}
       <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 md:gap-4">
         <Column title={t('live.ally')} players={live.myTeam} st={st} enemy={false} />
         <Column title={t('live.enemy')} players={live.enemyTeam} st={st} enemy />
