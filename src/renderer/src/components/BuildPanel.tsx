@@ -1,0 +1,160 @@
+import { useRef, type ReactNode } from 'react'
+import { champIcon, type ApplyRequest, type Build, type ChampSelectState, type Matchup, type Settings, type StaticData } from '@shared/types'
+import { useT, type Key } from '../i18n'
+import { fmtGames, fmtPct, wrColor } from '../util'
+import { Button, Card, Eyebrow } from './ui'
+import { Arrow, ItemIcon, ItemSetRow } from './ItemIcon'
+import { prefKey } from '@shared/prefs'
+import { RuneSection, saveRunePref } from './RunePageCard'
+import { SkillOrder } from './SkillOrder'
+import { SpellControl } from './SpellPicker'
+import type { PushToast } from './Toasts'
+
+export type ApplyFn = (req: Omit<ApplyRequest, 'championId' | 'lane'>, kind: 'runes' | 'spells' | 'items') => void
+
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-mute">{label}</div>
+      {children}
+    </div>
+  )
+}
+
+function Matchups({ title, list, st, enemyId }: { title: string; list: Matchup[]; st: StaticData; enemyId: number | null }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[12px] font-semibold">{title}</div>
+      <div className="space-y-0.5">
+        {list.slice(0, 4).map((m) => {
+          const c = st.champions[m.championId]
+          if (!c) return null
+          return (
+            <div key={m.championId} className={`flex items-center gap-2.5 rounded-lg px-2 py-1 ${m.championId === enemyId ? 'bg-gold/10 ring-1 ring-gold/40' : ''}`}>
+              <img src={champIcon(st.version, c.id)} alt="" className="size-7 rounded-md border border-line" />
+              <span className="flex-1 truncate text-[12.5px] font-medium">{c.name}</span>
+              <span className={`text-[12.5px] font-bold ${wrColor(m.wr)}`}>{fmtPct(m.wr)}</span>
+              <span className="w-12 text-right text-[10.5px] text-mute">{fmtGames(m.n)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+interface Props {
+  build: Build
+  st: StaticData
+  cs: ChampSelectState
+  settings: Settings
+  enemyId: number | null
+  vsLaner?: number // enemy champion in my lane / the enemy jungler, for the matchup rune pages
+  vsJungler?: number
+  enemyVs: number | null // our win rate against the likely enemy laner
+  onApply: ApplyFn
+  toast: PushToast
+}
+
+// the full build of the hovered/locked champion, inline in the draft
+export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungler, enemyVs, onApply, toast }: Props) {
+  const t = useT()
+  const enemy = enemyId ? st.champions[enemyId] : undefined
+  // changes in champ select go straight to the client, but only while the hovered/locked champion is the one shown
+  const live = useRef(cs)
+  live.current = cs
+  const auto = cs.championId === build.championId
+  const send = async (req: Omit<ApplyRequest, 'championId' | 'lane'>) => {
+    if (live.current.championId !== build.championId) return null
+    try {
+      const r = await window.lolay.applyBuild({ championId: build.championId, lane: build.lane, ...req })
+      return !r.error && r.runes !== 'error' && r.items !== 'error'
+    } catch {
+      return false
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <RuneSection
+        key={`${build.championId}:${build.lane}`}
+        pages={build.runes}
+        championId={build.championId}
+        lane={build.lane}
+        vsLaner={vsLaner}
+        vsJungler={vsJungler}
+        st={st}
+        editBase={`${build.championId}:${build.lane}`}
+        keystone={build.runeStatsLevel === 'keystone'}
+        saved={settings.runePrefs[prefKey(build.championId, build.lane) ?? '']}
+        onSave={(perks) => { const k = prefKey(build.championId, build.lane); if (k) saveRunePref(settings, k, perks) }}
+        onApply={(perks, runeIndex) => onApply({ runeIndex, perks }, 'runes')}
+        auto={auto ? (perks, _i, picked) => send({ perks, ...(picked && settings.autoImport.items && { items: true }) }) : undefined}
+      />
+
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
+        <Card className="p-4">
+          <Eyebrow>{t('spells.title')}</Eyebrow>
+          <SpellControl pairs={build.spells} st={st} settings={settings} cs={auto ? cs : null} championId={build.championId} toast={toast} saved={settings.spellPrefs[prefKey(build.championId, build.lane) ?? '']} />
+        </Card>
+        <Card className="p-4">
+          <SkillOrder order={build.skillOrder} priority={build.skillPriority} />
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <Eyebrow right={<Button variant="ghost" className="!px-3 !py-1 !text-[12px]" onClick={() => onApply({ items: true }, 'items')}>{t('items.import')}</Button>}>
+          {t('items.title')}
+        </Eyebrow>
+        <div className="flex flex-wrap gap-x-8 gap-y-4">
+          <Group label={t('items.start')}>
+            <div className="flex gap-3">{build.startItems.slice(0, 2).map((s) => <ItemSetRow key={s.ids.join()} ids={s.ids} st={st} wr={s.wr} n={s.n} size={34} />)}</div>
+          </Group>
+          {build.core && (
+            <Group label={t('items.core')}>
+              <div className="flex items-start gap-2">
+                {build.core.ids.map((id, i) => (
+                  <div key={id} className="flex items-start gap-2">
+                    {i > 0 && <Arrow />}
+                    <ItemIcon id={id} st={st} size={42} wr={i === 0 ? build.core!.wr : undefined} n={i === 0 ? build.core!.n : undefined} />
+                  </div>
+                ))}
+              </div>
+            </Group>
+          )}
+          <Group label={t('items.boots')}>
+            <div className="flex gap-2.5">{build.boots.slice(0, 3).map((b) => <ItemIcon key={b.id} id={b.id} st={st} size={36} wr={b.wr} n={b.n} />)}</div>
+          </Group>
+        </div>
+        <div className="mt-4 grid gap-x-6 gap-y-4 border-t border-line pt-3.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))]">
+          {([['items.item4', build.item4], ['items.item5', build.item5], ['items.item6', build.item6]] as [Key, typeof build.item4][]).map(([k, list]) => (
+            <Group key={k} label={t(k)}>
+              <div className="flex gap-2.5">{list.slice(0, 3).map((b) => <ItemIcon key={b.id} id={b.id} st={st} size={36} wr={b.wr} n={b.n} />)}</div>
+            </Group>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <Eyebrow
+          right={
+            <span className="text-[11.5px] text-mute">
+              {enemy ? (
+                <>
+                  {t('draft.vsEnemy')}: <span className="font-semibold text-fg">{enemy.name}</span>
+                  {enemyVs != null && <> · {t('draft.vsWr')} <span className={`font-bold ${wrColor(enemyVs)}`}>{fmtPct(enemyVs)}</span></>}
+                </>
+              ) : t('draft.vsUnknown')}
+            </span>
+          }
+        >
+          {t('counters.title')}
+        </Eyebrow>
+        <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
+          <Matchups title={t('counters.strong')} list={build.counters.strong} st={st} enemyId={enemyId} />
+          <Matchups title={t('counters.weak')} list={build.counters.weak} st={st} enemyId={enemyId} />
+        </div>
+      </Card>
+    </div>
+  )
+}

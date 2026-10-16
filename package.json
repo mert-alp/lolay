@@ -1,0 +1,67 @@
+{
+  "name": "lolay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kişisel LoL client companion (Lolalytics)",
+  "main": "./out/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\"",
+    "dist": "electron-vite build && electron-builder --win"
+  },
+  "build": {
+    "appId": "local.lolay",
+    "productName": "Lolay",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**",
+      "resources/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "resources/icon.png"
+    },
+    "portable": {
+      "artifactName": "Lolay-${version}-portable.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lolay",
+      "artifactName": "Lolay-Setup-${version}.exe",
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "dependencies": {
+    "node-html-parser": "^9.0.4",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.8.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^6.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.4"
+  }
+}

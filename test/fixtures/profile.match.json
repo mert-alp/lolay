@@ -1,0 +1,255 @@
+{
+ "metadata": {
+  "matchId": "TR1_1000",
+  "participants": [
+   "me",
+   "ally",
+   "foe1",
+   "foe2"
+  ]
+ },
+ "info": {
+  "gameCreation": 1760000000000,
+  "gameDuration": 1800,
+  "gameVersion": "16.20.1",
+  "queueId": 420,
+  "participants": [
+   {
+    "puuid": "me",
+    "riotIdGameName": "Schelter",
+    "riotIdTagline": "TR1",
+    "championId": 103,
+    "teamId": 100,
+    "teamPosition": "MIDDLE",
+    "win": true,
+    "kills": 10,
+    "deaths": 2,
+    "assists": 8,
+    "totalMinionsKilled": 200,
+    "neutralMinionsKilled": 10,
+    "goldEarned": 14000,
+    "totalDamageDealtToChampions": 30000,
+    "visionScore": 25,
+    "champLevel": 17,
+    "wardsPlaced": 9,
+    "summoner1Id": 4,
+    "summoner2Id": 14,
+    "item0": 3118,
+    "item1": 3020,
+    "item2": 0,
+    "item3": 0,
+    "item4": 0,
+    "item5": 0,
+    "item6": 3340,
+    "perks": {
+     "styles": [
+      {
+       "style": 8100,
+       "selections": [
+        {
+         "perk": 8112
+        },
+        {
+         "perk": 8139
+        }
+       ]
+      },
+      {
+       "style": 8200,
+       "selections": [
+        {
+         "perk": 8226
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "puuid": "ally",
+    "riotIdGameName": "Ally",
+    "riotIdTagline": "jg",
+    "championId": 64,
+    "teamId": 100,
+    "teamPosition": "JUNGLE",
+    "win": true,
+    "kills": 5,
+    "deaths": 5,
+    "assists": 12,
+    "totalMinionsKilled": 30,
+    "neutralMinionsKilled": 150,
+    "goldEarned": 11000,
+    "totalDamageDealtToChampions": 15000,
+    "visionScore": 0,
+    "champLevel": 10,
+    "wardsPlaced": 0,
+    "summoner1Id": 4,
+    "summoner2Id": 14,
+    "item0": 0,
+    "item1": 0,
+    "item2": 0,
+    "item3": 0,
+    "item4": 0,
+    "item5": 0,
+    "item6": 3340,
+    "perks": {
+     "styles": [
+      {
+       "style": 8100,
+       "selections": [
+        {
+         "perk": 8112
+        },
+        {
+         "perk": 8139
+        }
+       ]
+      },
+      {
+       "style": 8200,
+       "selections": [
+        {
+         "perk": 8226
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "puuid": "foe1",
+    "riotIdGameName": "Foe",
+    "riotIdTagline": "666",
+    "championId": 238,
+    "teamId": 200,
+    "teamPosition": "MIDDLE",
+    "win": false,
+    "kills": 5,
+    "deaths": 10,
+    "assists": 3,
+    "totalMinionsKilled": 150,
+    "neutralMinionsKilled": 0,
+    "goldEarned": 9000,
+    "totalDamageDealtToChampions": 18000,
+    "visionScore": 0,
+    "champLevel": 10,
+    "wardsPlaced": 0,
+    "summoner1Id": 4,
+    "summoner2Id": 14,
+    "item0": 0,
+    "item1": 0,
+    "item2": 0,
+    "item3": 0,
+    "item4": 0,
+    "item5": 0,
+    "item6": 3340,
+    "perks": {
+     "styles": [
+      {
+       "style": 8100,
+       "selections": [
+        {
+         "perk": 8112
+        },
+        {
+         "perk": 8139
+        }
+       ]
+      },
+      {
+       "style": 8200,
+       "selections": [
+        {
+         "perk": 8226
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "puuid": "foe2",
+    "riotIdGameName": "Sup",
+    "riotIdTagline": "x",
+    "championId": 412,
+    "teamId": 200,
+    "teamPosition": "UTILITY",
+    "win": false,
+    "kills": 0,
+    "deaths": 9,
+    "assists": 10,
+    "totalMinionsKilled": 20,
+    "neutralMinionsKilled": 0,
+    "goldEarned": 6000,
+    "totalDamageDealtToChampions": 5000,
+    "visionScore": 0,
+    "champLevel": 10,
+    "wardsPlaced": 0,
+    "summoner1Id": 4,
+    "summoner2Id": 14,
+    "item0": 0,
+    "item1": 0,
+    "item2": 0,
+    "item3": 0,
+    "item4": 0,
+    "item5": 0,
+    "item6": 3340
+   }
+  ],
+  "teams": [
+   {
+    "teamId": 100,
+    "win": true,
+    "bans": [],
+    "objectives": {
+     "baron": {
+      "kills": 1
+     },
+     "dragon": {
+      "kills": 3
+     },
+     "horde": {
+      "kills": 2
+     },
+     "riftHerald": {
+      "kills": 1
+     },
+     "tower": {
+      "kills": 9
+     },
+     "inhibitor": {
+      "kills": 2
+     },
+     "champion": {
+      "kills": 16
+     }
+    }
+   },
+   {
+    "teamId": 200,
+    "win": false,
+    "bans": [],
+    "objectives": {
+     "baron": {
+      "kills": 0
+     },
+     "dragon": {
+      "kills": 1
+     },
+     "riftHerald": {
+      "kills": 0
+     },
+     "tower": {
+      "kills": 2
+     },
+     "inhibitor": {
+      "kills": 0
+     },
+     "champion": {
+      "kills": 11
+     }
+    }
+   }
+  ]
+ }
+}

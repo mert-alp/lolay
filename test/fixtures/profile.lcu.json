@@ -1,0 +1,115 @@
+{
+ "gameId": 2000,
+ "gameCreation": 1760000500000,
+ "gameDuration": 1500,
+ "queueId": 440,
+ "platformId": "TR1",
+ "participantIdentities": [
+  {
+   "participantId": 1,
+   "player": {
+    "gameName": "Schelter",
+    "tagLine": "TR1",
+    "puuid": "lcu-me",
+    "summonerName": ""
+   }
+  },
+  {
+   "participantId": 2,
+   "player": {
+    "gameName": "",
+    "tagLine": "",
+    "puuid": "00000000-0000-0000-0000-000000000000",
+    "summonerName": "Braum"
+   }
+  }
+ ],
+ "participants": [
+  {
+   "participantId": 1,
+   "teamId": 100,
+   "championId": 1,
+   "spell1Id": 4,
+   "spell2Id": 14,
+   "stats": {
+    "win": true,
+    "kills": 4,
+    "deaths": 1,
+    "assists": 6,
+    "champLevel": 12,
+    "totalMinionsKilled": 100,
+    "neutralMinionsKilled": 5,
+    "goldEarned": 0,
+    "totalDamageDealtToChampions": 0,
+    "visionScore": 0,
+    "wardsPlaced": 0,
+    "perk0": 8005,
+    "perkSubStyle": 8200,
+    "item0": 3118,
+    "item1": 0,
+    "item2": 0,
+    "item3": 0,
+    "item4": 0,
+    "item5": 0,
+    "item6": 3340
+   },
+   "timeline": {
+    "lane": "MIDDLE",
+    "role": "SOLO"
+   }
+  },
+  {
+   "participantId": 2,
+   "teamId": 200,
+   "championId": 1,
+   "spell1Id": 4,
+   "spell2Id": 14,
+   "stats": {
+    "win": false,
+    "kills": 0,
+    "deaths": 4,
+    "assists": 0,
+    "champLevel": 12,
+    "totalMinionsKilled": 0,
+    "neutralMinionsKilled": 0,
+    "goldEarned": 0,
+    "totalDamageDealtToChampions": 0,
+    "visionScore": 0,
+    "wardsPlaced": 0,
+    "perk0": 8005,
+    "perkSubStyle": 8200,
+    "item0": 0,
+    "item1": 0,
+    "item2": 0,
+    "item3": 0,
+    "item4": 0,
+    "item5": 0,
+    "item6": 3340
+   },
+   "timeline": {
+    "lane": "BOTTOM",
+    "role": "SUPPORT"
+   }
+  }
+ ],
+ "teams": [
+  {
+   "teamId": 100,
+   "win": "Win",
+   "baronKills": 1,
+   "dragonKills": 2,
+   "towerKills": 7,
+   "riftHeraldKills": 1,
+   "inhibitorKills": 1
+  },
+  {
+   "teamId": 200,
+   "win": "Fail",
+   "baronKills": 0,
+   "dragonKills": 0,
+   "towerKills": 1,
+   "riftHeraldKills": 0,
+   "inhibitorKills": 0
+  }
+ ]
+}
