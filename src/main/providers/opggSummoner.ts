@@ -2,7 +2,7 @@
 // Name search, profile, ranks, and the match list with all ten players per game. Region is part of every path.
 // Throttled to ~5 req/s per host and cached; any non-200 or unexpected shape throws OpggError so callers can fall back to the Riot API.
 import type { Lane, MatchDetail, MatchPlayer, MatchTeam, ProfileRank, SearchResult } from '../../shared/types.ts'
-import { regionLabel, REGIONS } from '../profileStats.ts'
+import { arenaTeams, regionLabel, REGIONS } from '../profileStats.ts'
 import { createCache, createGate, type Clock } from './limit.ts'
 
 const HOST = 'https://lol-api-summoner.op.gg'
@@ -96,6 +96,10 @@ export function parseChampions(body: unknown): Record<number, OpggChampStat> {
 export function detailFromOpgg(g: any, platform: string): MatchDetail | null {
   const parts = arr(g?.participants)
   if (!g?.id || parts.length < 2) return null
+  // BLUE / RED on the Rift; Arena has a team per key (MINION, PORO, KRUG, ...) with a final standing
+  const keys = [...new Set(parts.map((p) => String(p.team_key)))]
+  const arena = keys.some((k) => k !== 'BLUE' && k !== 'RED')
+  const teamIdOf = (key: unknown) => (arena ? keys.indexOf(String(key)) + 1 : key === 'RED' ? 200 : 100)
   const players: MatchPlayer[] = parts.map((p) => {
     const s = p.stats ?? {}
     const items = arr(p.items).map(num)
@@ -104,7 +108,8 @@ export function detailFromOpgg(g: any, platform: string): MatchDetail | null {
       name: String(p.summoner?.game_name ?? ''),
       tag: String(p.summoner?.tagline ?? ''),
       championId: num(p.champion_id),
-      teamId: p.team_key === 'RED' ? 200 : 100,
+      teamId: teamIdOf(p.team_key),
+      ...(arena && num(s.subteam_placement) ? { placement: num(s.subteam_placement) } : {}),
       position: LANE[String(p.position)] ?? null,
       level: num(s.champion_level),
       kills: num(s.kill),
@@ -121,7 +126,7 @@ export function detailFromOpgg(g: any, platform: string): MatchDetail | null {
       tree: num(p.rune?.secondary_page_id)
     }
   })
-  const teams: MatchTeam[] = arr(g.teams).map((t) => {
+  const teams: MatchTeam[] = arena ? arenaTeams(players, (id) => parts.find((p) => teamIdOf(p.team_key) === id)?.stats?.result === 'WIN') : arr(g.teams).map((t) => {
     const s = t.game_stat ?? {}
     const teamId = t.key === 'RED' ? 200 : 100
     const mine = players.filter((p) => p.teamId === teamId)

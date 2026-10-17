@@ -122,6 +122,9 @@ export function MatchRow({ m, st, open, onToggle, onOpenProfile }: Props) {
   const stop = (e: MouseEvent | KeyboardEvent) => e.stopPropagation()
 
   const team = (id: number) => m.players.filter((p) => p.teamId === id)
+  // more than two teams: an Arena game, grouped by team and ordered by standing
+  const groups = [...new Set(m.players.map((p) => p.teamId))]
+  const arena = groups.length > 2 ? groups.map(team).sort((a, b) => (a[0].placement ?? 99) - (b[0].placement ?? 99)) : null
   return (
     <article className={`@container fade-up relative overflow-hidden rounded-xl border bg-card transition-colors duration-150 ${open ? 'border-[#2f384c]' : 'border-line hover:border-[#2a3244]'}`}>
       <span className={`absolute inset-y-0 left-0 w-1 ${bar} ${m.remake ? 'opacity-50' : ''}`} />
@@ -139,7 +142,7 @@ export function MatchRow({ m, st, open, onToggle, onOpenProfile }: Props) {
           <div className="mt-0.5 truncate text-[11px] text-mute">{timeAgo(m.at, lang)}</div>
           <div className="my-1.5 h-px w-6 bg-line" />
           <div className="truncate text-[11px]">
-            <span className={`font-semibold ${tint}`}>{t(m.remake ? 'pf.remake' : m.win ? 'pf.win' : 'pf.loss')}</span>
+            <span className={`font-semibold ${tint}`}>{m.placement && !m.remake ? t('pf.place').replace('{n}', String(m.placement)) : t(m.remake ? 'pf.remake' : m.win ? 'pf.win' : 'pf.loss')}</span>
             <span className="text-mute"> · {fmtDuration(m.duration)}</span>
           </div>
         </div>
@@ -168,6 +171,25 @@ export function MatchRow({ m, st, open, onToggle, onOpenProfile }: Props) {
 
         <Items ids={me.items} st={st} size={28} />
 
+        {arena ? (
+          // Arena: 6-8 small teams; one line per team, by standing, champion icons only (names on hover)
+          <div className="ml-auto grid min-w-0 flex-1 basis-[210px] grid-cols-2 gap-x-3 gap-y-1 @4xl:max-w-[250px]">
+            {arena.map((ps) => (
+              <div key={ps[0].teamId} className="flex min-w-0 items-center gap-1">
+                <span className={`w-5 shrink-0 text-right text-[10.5px] font-semibold ${ps.some((p) => p.puuid === me.puuid) ? tint : 'text-mute'}`}>{ps[0].placement ?? '–'}.</span>
+                {ps.map((p, i) => {
+                  const rid = riotIdOf(p)
+                  return (
+                    <button key={i} disabled={!rid} onClick={(e) => { stop(e); if (rid) onOpenProfile(rid) }} onKeyDown={stop} title={rid ?? st.champions[p.championId]?.name}
+                      className={`rounded-[4px] transition enabled:hover:ring-1 enabled:hover:ring-gold/70 ${p.puuid === me.puuid ? 'ring-1 ring-gold/80' : ''}`}>
+                      <ChampIcon id={p.championId} st={st} size={18} className="rounded-[4px]" />
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="ml-auto grid min-w-0 flex-1 basis-[210px] grid-cols-2 gap-x-3 @4xl:max-w-[250px]">
           {[100, 200].map((id) => (
             <div key={id} className="min-w-0 space-y-px">
@@ -191,6 +213,7 @@ export function MatchRow({ m, st, open, onToggle, onOpenProfile }: Props) {
             </div>
           ))}
         </div>
+        )}
 
         <button
           aria-label={t('pf.detail')}

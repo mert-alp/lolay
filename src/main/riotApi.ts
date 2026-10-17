@@ -71,6 +71,8 @@ export interface MatchParticipant {
   teamId: number
   teamPosition: string
   win: boolean
+  playerSubteamId?: number // Arena: 1..8
+  subteamPlacement?: number // Arena: 1 = first
   kills: number
   deaths: number
   assists: number

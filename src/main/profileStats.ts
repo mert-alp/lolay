@@ -70,13 +70,22 @@ function teamOf(teamId: number, win: boolean, players: MatchPlayer[], o: Partial
   }
 }
 
+// Arena: a team per subteam, ordered by standing; the 100 / 200 "teams" of those games mean nothing
+export function arenaTeams(players: MatchPlayer[], winOf: (teamId: number) => boolean): MatchTeam[] {
+  const ids = [...new Set(players.map((p) => p.teamId))]
+  return ids
+    .map((id) => ({ ...teamOf(id, winOf(id), players, {}), placement: players.find((p) => p.teamId === id)?.placement }))
+    .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
+}
+
 export function detailFromRiot(m: Match): MatchDetail {
   const players: MatchPlayer[] = m.info.participants.map((p) => ({
     puuid: p.puuid,
     name: p.riotIdGameName ?? '',
     tag: p.riotIdTagline ?? '',
     championId: p.championId,
-    teamId: p.teamId,
+    teamId: p.playerSubteamId ? p.playerSubteamId : p.teamId,
+    ...(p.subteamPlacement ? { placement: p.subteamPlacement } : {}),
     position: LANE[p.teamPosition] ?? null,
     level: num(p.champLevel),
     kills: p.kills,
@@ -92,7 +101,8 @@ export function detailFromRiot(m: Match): MatchDetail {
     keystone: num(p.perks?.styles?.[0]?.selections?.[0]?.perk),
     tree: num(p.perks?.styles?.[1]?.style)
   }))
-  const teams = m.info.teams.map((t) => {
+  const arena = m.info.participants.some((p) => p.playerSubteamId)
+  const teams = arena ? arenaTeams(players, (id) => !!m.info.participants.find((p) => p.playerSubteamId === id)?.win) : m.info.teams.map((t) => {
     const o = t.objectives
     return teamOf(t.teamId, t.win, players, {
       baron: o?.baron?.kills, dragon: o?.dragon?.kills, herald: o?.riftHerald?.kills, tower: o?.tower?.kills, inhibitor: o?.inhibitor?.kills, kills: o?.champion?.kills
@@ -116,7 +126,8 @@ export function detailFromLcu(g: any, platform: string): MatchDetail | null {
       name: who.gameName || who.summonerName || '',
       tag: who.tagLine ?? '',
       championId: num(p.championId),
-      teamId: num(p.teamId),
+      teamId: num(s.playerSubteamId) || num(p.teamId),
+      ...(num(s.subteamPlacement) ? { placement: num(s.subteamPlacement) } : {}),
       position: lane === 'BOTTOM' ? (role.includes('SUPPORT') ? 'support' : 'bottom') : (LANE[lane === 'MID' ? 'MIDDLE' : lane] ?? null),
       level: num(s.champLevel),
       kills: num(s.kills),
@@ -133,7 +144,8 @@ export function detailFromLcu(g: any, platform: string): MatchDetail | null {
       tree: num(s.perkSubStyle)
     }
   })
-  const teams = (g.teams ?? []).map((t: any) =>
+  const arena = parts.some((p) => num(p.stats?.playerSubteamId))
+  const teams = arena ? arenaTeams(players, (id) => !!parts.find((p) => num(p.stats?.playerSubteamId) === id)?.stats?.win) : (g.teams ?? []).map((t: any) =>
     teamOf(num(t.teamId), t.win === 'Win' || t.win === true, players, { baron: t.baronKills, dragon: t.dragonKills, herald: t.riftHeraldKills, tower: t.towerKills, inhibitor: t.inhibitorKills })
   )
   return { id: `${platform.toUpperCase()}_${g.gameId}`, queueId: num(g.queueId), at: num(g.gameCreation), duration: num(g.gameDuration), players, teams }
@@ -157,10 +169,11 @@ export function entryOf(d: MatchDetail, who: Who): MatchEntry | null {
     at: d.at,
     duration: d.duration,
     win: team?.win ?? false,
+    ...(team?.placement ? { placement: team.placement } : {}),
     remake: d.duration < REMAKE_SECONDS,
     teamKills: team?.kills ?? 0,
     me,
-    players: d.players.map(({ puuid, name, tag, championId, teamId }) => ({ puuid, name, tag, championId, teamId }))
+    players: d.players.map(({ puuid, name, tag, championId, teamId, placement }) => ({ puuid, name, tag, championId, teamId, ...(placement ? { placement } : {}) }))
   }
 }
 

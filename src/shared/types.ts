@@ -444,9 +444,11 @@ export interface MatchPlayer {
   spells: number[] // 2 summoner spell keys
   keystone: number // rune id
   tree: number // secondary rune tree id
+  placement?: number // Arena: final standing of the player's team, 1 = first
 }
 export interface MatchTeam {
-  teamId: number
+  teamId: number // 100 / 200; Arena: the subteam id
+  placement?: number // Arena only
   win: boolean
   kills: number
   gold: number
@@ -469,7 +471,8 @@ export interface MatchEntry {
   remake: boolean
   teamKills: number
   me: MatchPlayer
-  players: Pick<MatchPlayer, 'puuid' | 'name' | 'tag' | 'championId' | 'teamId'>[]
+  players: Pick<MatchPlayer, 'puuid' | 'name' | 'tag' | 'championId' | 'teamId' | 'placement'>[]
+  placement?: number // Arena: my team's final standing
 }
 export interface ProfileQuery {
   gameName: string

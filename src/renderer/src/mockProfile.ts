@@ -1,6 +1,6 @@
 // Dev-only profile data for the browser preview (see mock.ts). Hash flags: #profile-nokey, #profile-slow
 import type { MatchDetail, MatchPlayer, PostGame, MatchesQuery, Profile, ProfileQuery, ProfileResult, MatchEntry, Lane, SearchQuery, SearchResponse, SearchResult } from '@shared/types'
-import { entryOf, FILTER_QUEUES } from '../../main/profileStats.ts'
+import { arenaTeams, entryOf, FILTER_QUEUES } from '../../main/profileStats.ts'
 
 const CHAMPS = [103, 86, 64, 222, 412, 238, 157, 11, 51, 117, 61, 134, 84, 7, 245, 121, 80, 59, 19, 105, 266, 202, 21, 498, 360, 777, 54, 90]
 const NAMES = ['IronGaren', 'Pelin', 'Kuzgun', 'adc_main', 'Zeynep', 'Yasuo4Life', 'Alpha', 'NoHistory', 'sivas58', 'Ayşe Nur']
@@ -24,8 +24,9 @@ function build(seed: number, i: number, puuid: string): MatchDetail {
   const win = rnd(seed * 7 + i) > 0.46
   const mySlot = Math.floor(rnd(seed + 5) * 3) === 0 ? 2 : Math.floor(rnd(seed * 3 + i) * 5) // mostly one lane
   const myChamp = CHAMPS[Math.floor(rnd(seed + Math.floor(i / 3)) * 6)] // a small pool, like a real main
-  const players: MatchPlayer[] = Array.from({ length: 10 }, (_, k) => {
-    const team = k < 5 ? 100 : 200
+  const arena = queueId === 1700 // 6 teams of 3, ordered by standing
+  const players: MatchPlayer[] = Array.from({ length: arena ? 18 : 10 }, (_, k) => {
+    const team = arena ? Math.floor(k / 3) + 1 : k < 5 ? 100 : 200
     const isMe = k === mySlot
     const r = (n: number) => rnd(seed * 101 + i * 17 + k * 5 + n)
     const strong = (team === 100) === win
@@ -53,7 +54,8 @@ function build(seed: number, i: number, puuid: string): MatchDetail {
       items: remake ? Array(7).fill(0) : [...owned.map((x, n) => (n < Math.min(6, level - 7) ? x : 0)), 3340],
       spells: SPELLS[Math.floor(r(13) * SPELLS.length)],
       keystone,
-      tree
+      tree,
+      ...(arena ? { placement: ((team + i) % 6) + 1 } : {})
     }
   })
   const team = (teamId: number) => {
@@ -62,7 +64,7 @@ function build(seed: number, i: number, puuid: string): MatchDetail {
     const o = (n: number) => Math.floor(rnd(seed + i * 11 + teamId + n) * (w ? n : n / 2.5))
     return { teamId, win: w, kills: mine.reduce((s, p) => s + p.kills, 0), gold: mine.reduce((s, p) => s + p.gold, 0), objectives: { baron: o(2) > 0 ? 1 : 0, dragon: o(5), herald: o(2), tower: w ? 5 + o(6) : o(5), inhibitor: w ? 1 + o(2) : 0 } }
   }
-  const d: MatchDetail = { id, queueId, at: Date.now() - (i * 5.5 + 0.7) * 36e5, duration: remake ? 190 : duration, players, teams: [team(100), team(200)] }
+  const d: MatchDetail = { id, queueId, at: Date.now() - (i * 5.5 + 0.7) * 36e5, duration: remake ? 190 : duration, players, teams: arena ? arenaTeams(players, (t) => (((t + i) % 6) + 1) <= 3) : [team(100), team(200)] }
   details.set(id, d)
   return d
 }

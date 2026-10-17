@@ -170,3 +170,13 @@ test('chain: match lists try OP.GG first (Blitz lags), then Blitz read as Riot-s
   assert.ok(c.hits.includes('riot'))
   c.done()
 })
+
+test('OP.GG Arena game: a team per key, ordered by standing, my placement on the row', () => {
+  const part = (key: string, name: string, place: number, result: string) => ({ team_key: key, champion_id: 1, summoner: { puuid: name, game_name: name, tagline: 'x' }, stats: { subteam_placement: place, result, kill: 1, death: 1, assist: 1 }, items: [], spells: [] })
+  const g = { id: 'a1', queue_id: 1740, created_at: '2026-10-17T10:00:00Z', game_length_second: 1400, teams: [], participants: [part('MINION', 'me', 3, 'LOSE'), part('MINION', 'mate', 3, 'LOSE'), part('PORO', 'p1', 1, 'WIN'), part('KRUG', 'k1', 2, 'WIN')] }
+  const d = parseGames({ data: [g], meta: {} }, 'tr1').games[0]
+  assert.deepEqual(d.teams.map((t) => [t.placement, t.win]), [[1, true], [2, true], [3, false]])
+  const e = entryOf(d, 'me')!
+  assert.equal(e.placement, 3)
+  assert.equal(new Set(e.players.map((p) => p.teamId)).size, 3)
+})

@@ -55,14 +55,21 @@ function PlayerLine({ p, st, max, blue, me, onOpenProfile }: { p: MatchPlayer; s
 function Team({ team, players, st, max, mePuuid, onOpenProfile }: { team: MatchTeam; players: MatchPlayer[]; st: StaticData; max: number; mePuuid: string; onOpenProfile: (id: string) => void }) {
   const t = useT()
   const blue = team.teamId === 100
+  const arena = team.placement != null
   return (
     <section>
       <div className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2">
         <span className={`size-2 rounded-full ${blue ? 'bg-blue shadow-[0_0_10px_rgba(59,130,246,.8)]' : 'bg-loss shadow-[0_0_10px_rgba(239,68,68,.8)]'}`} />
-        <h4 className="text-[11px] font-semibold tracking-[0.14em] text-mute uppercase">{t(blue ? 'pf.team1' : 'pf.team2')}</h4>
-        <span className={`text-[11.5px] font-bold ${team.win ? 'text-win' : 'text-loss'}`}>{t(team.win ? 'pf.win' : 'pf.loss')}</span>
+        {arena ? (
+          <span className={`text-[12px] font-bold ${team.win ? 'text-win' : 'text-loss'}`}>{t('pf.place').replace('{n}', String(team.placement))}</span>
+        ) : (
+          <>
+            <h4 className="text-[11px] font-semibold tracking-[0.14em] text-mute uppercase">{t(blue ? 'pf.team1' : 'pf.team2')}</h4>
+            <span className={`text-[11.5px] font-bold ${team.win ? 'text-win' : 'text-loss'}`}>{t(team.win ? 'pf.win' : 'pf.loss')}</span>
+          </>
+        )}
         <span className="text-[11px] text-mute">{team.kills} {t('pf.kills')} · <span className="text-[#f0b232]">{fmtGames(team.gold)}</span></span>
-        <div className="flex flex-wrap gap-1 sm:ml-auto">{OBJ.map((o) => <Objective key={o} id={o} n={team.objectives[o]} />)}</div>
+        {!arena && <div className="flex flex-wrap gap-1 sm:ml-auto">{OBJ.map((o) => <Objective key={o} id={o} n={team.objectives[o]} />)}</div>}
       </div>
       <div className="space-y-px">
         {players.map((p, i) => <PlayerLine key={i} p={p} st={st} max={max} blue={blue} me={p.puuid === mePuuid} onOpenProfile={onOpenProfile} />)}
@@ -93,7 +100,7 @@ export function MatchDetail({ m, st, onOpenProfile }: { m: MatchEntry; st: Stati
         </div>
       ) : (
         <div className="space-y-4">
-          {[...res.data.teams].sort((a, b) => a.teamId - b.teamId).map((team) => {
+          {[...res.data.teams].sort((a, b) => (a.placement ?? a.teamId) - (b.placement ?? b.teamId)).map((team) => {
             const players = res.data.players.filter((p) => p.teamId === team.teamId)
             return <Team key={team.teamId} team={team} players={players} st={st} max={Math.max(1, ...res.data.players.map((p) => p.damage))} mePuuid={m.me.puuid} onOpenProfile={onOpenProfile} />
           })}
