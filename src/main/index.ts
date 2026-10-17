@@ -96,7 +96,7 @@ function buildTrayMenu() {
 
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 32, height: 32 }))
-  tray.setToolTip('Lolay')
+  tray.setToolTip('LoLo')
   tray.on('click', showWindow)
   let menuKey = ''
   const rebuild = () => {

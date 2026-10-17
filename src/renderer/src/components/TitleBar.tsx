@@ -8,17 +8,19 @@ const CREST = 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-
 import { TierSelect } from './TierSelect'
 import { PlayerSearch } from './PlayerSearch'
 
+// the app icon's hextech seal (resources/icon.svg) without its tile, sized for the title bar
 function Logo() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+    <svg width="18" height="18" viewBox="84 58 344 396" aria-hidden>
       <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f0d89a" />
-          <stop offset="1" stopColor="#a8864a" />
-        </linearGradient>
+        <linearGradient id="lolo-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f6e2a8" /><stop offset=".45" stopColor="#c8aa6e" /><stop offset="1" stopColor="#7d5f2e" /></linearGradient>
+        <linearGradient id="lolo-gold2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#8a6a35" /><stop offset="1" stopColor="#f0d89a" /></linearGradient>
+        <radialGradient id="lolo-gem" cx=".4" cy=".35" r=".7"><stop offset="0" stopColor="#c9fbff" /><stop offset=".45" stopColor="#2fd6e6" /><stop offset="1" stopColor="#0a6f8a" /></radialGradient>
       </defs>
-      <path d="M8 .8 15.2 8 8 15.2.8 8Z" fill="url(#lg)" />
-      <path d="M8 4.6 11.4 8 8 11.4 4.6 8Z" fill="#0e1015" />
+      <path d="M256 70 417 163v186L256 442 95 349V163Z" fill="none" stroke="url(#lolo-gold)" strokeWidth="26" strokeLinejoin="round" />
+      <path d="M176 168h44v136h80v40H176Z" fill="url(#lolo-gold)" />
+      <path d="M336 344h-44V208h-80v-40h124Z" fill="url(#lolo-gold2)" />
+      <path d="M256 224 288 256 256 288 224 256Z" fill="url(#lolo-gem)" />
     </svg>
   )
 }
@@ -37,7 +39,7 @@ export function TitleBar({ state }: { state: AppState }) {
     <header className="drag relative z-30 flex h-10 shrink-0 items-center gap-2 border-b border-line bg-gradient-to-b from-[#141821] to-[#0f1218] pl-3 pr-1.5 sm:gap-3 sm:pl-3.5 sm:pr-2">
       <div className="flex shrink-0 items-center gap-2">
         <Logo />
-        <span className="hidden text-[13px] font-semibold tracking-[0.2em] text-fg/90 sm:inline">LOLAY</span>
+        <span className="hidden text-[13px] font-semibold tracking-[0.2em] text-fg/90 sm:inline">LOLO</span>
       </div>
 
       <div className="flex min-w-0 items-center gap-2 text-[12px] sm:ml-3 lg:ml-4">

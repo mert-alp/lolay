@@ -1,4 +1,4 @@
-# Lolay
+# LoLo
 
 Kişisel kullanım için League of Legends client yardımcısı (Electron). Blitz / OP.GG benzeri, oyun içi overlay olmadan; build verisini varsayılan olarak **Lolalytics**'ten çeker.
 
@@ -20,9 +20,9 @@ Kişisel kullanım için League of Legends client yardımcısı (Electron). Blit
 
 ## Kurulum
 
-[Releases](../../releases) sayfasından `Lolay-Setup-x.y.z.exe` dosyasını indirip çalıştır.
+[Releases](../../releases) sayfasından `LoLo-Setup-x.y.z.exe` dosyasını indirip çalıştır.
 Windows "bilinmeyen yayıncı" uyarısı verirse **Ek bilgi → Yine de çalıştır** (uygulama imzasız).
-League client'ı aç, Lolay otomatik bağlanır. Ek ayar veya anahtar gerekmez.
+League client'ı aç, LoLo otomatik bağlanır. Ek ayar veya anahtar gerekmez.
 
 - ✕ butonu uygulamayı sistem tepsisine gönderir; çıkmak için tepsi ikonu → **Çıkış**.
 - Hata kaydı: `%APPDATA%\lolay\lolay.log`
@@ -39,7 +39,7 @@ League client'ı aç, Lolay otomatik bağlanır. Ek ayar veya anahtar gerekmez.
 
 Riot Games API istemcisi kodda mevcut ama **kapalı** (`src/main/riotService.ts` → `RIOT_ENABLED`): kişisel anahtar dağıtılan bir uygulamaya gömülemez ve ara sunucu yok.
 
-Üçüncü parti sitelerin verileri resmi olmayan uç noktalardan okunur; kişisel kullanım içindir ve siteler değiştiğinde kırılabilir. Lolay, Riot Games ile bağlantılı değildir.
+Üçüncü parti sitelerin verileri resmi olmayan uç noktalardan okunur; kişisel kullanım içindir ve siteler değiştiğinde kırılabilir. LoLo, Riot Games ile bağlantılı değildir.
 
 ## Geliştirme
 

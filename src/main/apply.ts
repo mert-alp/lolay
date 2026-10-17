@@ -9,7 +9,9 @@ import { ddragon, getBuild, getStatic } from './services.ts'
 import { getSettings } from './settings.ts'
 import { getState } from './state.ts'
 
-const PREFIX = 'Lolay'
+const PREFIX = 'LoLo'
+const OLD_PREFIX = 'Lolay' // pages and sets written before the rename are still ours to replace
+const ours = (name: unknown) => String(name).startsWith(PREFIX) || String(name).startsWith(OLD_PREFIX)
 const BLOCKS: Record<Lang, string[]> = {
   tr: ['Başlangıç', 'Popüler Build', 'Seçenekler', 'Rakip Takıma Karşı', '{name} Karşı'], // same names as the build panel
   en: ['Starting', 'Popular Build', 'Options', 'Vs Enemy Team', 'Vs {name}']
@@ -32,7 +34,7 @@ async function applyRunes(perks: number[] | undefined, title: string): Promise<'
   // unknown perk (static data older than Lolalytics' patch): fail before deleting anything
   if (!primaryStyleId || !subStyleId) throw new Error(`unknown rune tree for ${perks[0]}/${perks[4]}`)
   const pages: any[] = await call('GET', '/lol-perks/v1/pages')
-  for (const p of pages) if (p.isDeletable && String(p.name).startsWith(PREFIX)) await del(p.id)
+  for (const p of pages) if (p.isDeletable && ours(p.name)) await del(p.id)
   const page = {
     name: title.slice(0, 25), // the client rejects longer names
     primaryStyleId,
@@ -77,13 +79,13 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
     block(t[3], [...new Set(advice?.rows.flatMap((r) => r.items.map((i) => i.id)) ?? [])]),
     block(vsName ? t[4].replace('{name}', toward(lang, vsName)) : '', advice?.vs?.items.map((i) => i.id) ?? [])
   ].filter((b) => b.type && b.items.length)
-  if (!blocks.length) return 'skipped' // keep the previous Lolay set instead of replacing it with an empty one
+  if (!blocks.length) return 'skipped' // keep the previous LoLo set instead of replacing it with an empty one
   const { summonerId } = (await call('GET', '/lol-summoner/v1/current-summoner')) as { summonerId: number }
   const url = `/lol-item-sets/v1/item-sets/${summonerId}/sets`
   const current = await call('GET', url)
   if (!Array.isArray(current?.itemSets)) throw new Error('unexpected item-sets response')
   const itemSets = [
-    ...current.itemSets.filter((s: any) => !String(s.title).startsWith(PREFIX)),
+    ...current.itemSets.filter((s: any) => !ours(s.title)),
     {
       title,
       type: 'custom',

@@ -1,6 +1,6 @@
 {
   "name": "lolay",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Kişisel LoL client companion (Lolalytics)",
   "main": "./out/main/index.js",
@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "local.lolay",
-    "productName": "Lolay",
+    "productName": "LoLo",
     "directories": {
       "output": "dist"
     },
@@ -28,10 +28,10 @@
         "nsis",
         "portable"
       ],
-      "icon": "resources/icon.png"
+      "icon": "resources/icon.ico"
     },
     "portable": {
-      "artifactName": "Lolay-${version}-portable.exe"
+      "artifactName": "LoLo-${version}-portable.exe"
     },
     "nsis": {
       "oneClick": false,
@@ -39,8 +39,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Lolay",
-      "artifactName": "Lolay-Setup-${version}.exe",
+      "shortcutName": "LoLo",
+      "artifactName": "LoLo-Setup-${version}.exe",
       "deleteAppDataOnUninstall": false
     }
   },
