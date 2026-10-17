@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { buildPath, type ItemAdvice } from '../shared/itemRules.ts'
+import { arrangeSets, buildPath, setsDisturbed, type ItemAdvice } from '../shared/itemRules.ts'
 import { toward } from '../shared/text.ts'
 import type { ApplyRequest, ApplyResult, Build, Lang } from '../shared/types.ts'
 import { itemAdvice } from './itemAdvice.ts'
@@ -84,9 +84,7 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
   const url = `/lol-item-sets/v1/item-sets/${summonerId}/sets`
   const current = await call('GET', url)
   if (!Array.isArray(current?.itemSets)) throw new Error('unexpected item-sets response')
-  const itemSets = [
-    ...current.itemSets.filter((s: any) => !ours(s.title)),
-    {
+  const mine = {
       title,
       type: 'custom',
       map: build.queue ? 'HA' : 'SR',
@@ -99,8 +97,27 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
       uid: randomUUID(),
       blocks
     }
-  ]
-  await call('PUT', url, { accountId: current.accountId, itemSets, timestamp: Date.now() })
+  await call('PUT', url, { accountId: current.accountId, itemSets: arrangeSets(current.itemSets, mine, (t) => ours(t)), timestamp: Date.now() })
+  void keepFirst(url, mine)
+}
+
+// Blitz writes its own set when the champion is locked, often a moment after us: look again a few times and take
+// the top back. Stops when our set was replaced by a newer LoLo import (its uid is gone).
+const GUARD_MS = [3000, 8000, 20000]
+async function keepFirst(url: string, mine: { uid: string }) {
+  for (const ms of GUARD_MS) {
+    await new Promise((r) => setTimeout(r, ms))
+    try {
+      const cur = await call('GET', url)
+      const sets: any[] = cur?.itemSets ?? []
+      const still = sets.find((s) => s.uid === mine.uid)
+      if (!still) return
+      if (setsDisturbed(sets, mine.uid)) await call('PUT', url, { accountId: cur.accountId, itemSets: arrangeSets(sets, still, (t) => ours(t)), timestamp: Date.now() })
+    } catch (e) {
+      console.error('item set guard', e)
+      return
+    }
+  }
 }
 
 // the renderer only gets a code; the raw text stays in the log

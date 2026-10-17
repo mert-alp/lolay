@@ -84,3 +84,14 @@ export function teamAdvice(pool: ItemStat[], items: Record<number, StaticItem>, 
 export function vsItems(vs: ItemStat[], items: Record<number, StaticItem>, path: number[], n = 4): ItemStat[] {
   return vs.filter((p) => p.n >= MIN_VS_GAMES && items[p.id]?.final && !path.includes(p.id)).sort((a, b) => b.n - a.n).slice(0, n)
 }
+
+const BLITZ = /blitz/i // ponytail: Blitz sets are told apart by their title; a Blitz rename needs this updated
+
+// The shop opens on the first item set of the champion: ours goes first and Blitz's go away.
+// Sets the user made by hand stay, after ours.
+export function arrangeSets<T extends { title?: unknown; uid?: unknown }>(sets: T[], mine: T, isOurs: (title: string) => boolean): T[] {
+  return [mine, ...sets.filter((s) => s.uid !== mine.uid && !isOurs(String(s.title)) && !BLITZ.test(String(s.title)))]
+}
+
+// someone (Blitz) wrote after us: our set is no longer first, or a Blitz set is back
+export const setsDisturbed = (sets: { title?: unknown; uid?: unknown }[], uid: string) => sets[0]?.uid !== uid || sets.some((s) => BLITZ.test(String(s.title)))

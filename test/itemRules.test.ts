@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildPath, enemyComp, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
+import { arrangeSets, buildPath, enemyComp, setsDisturbed, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
 import { ccSeconds } from '../src/main/champTraits.ts'
 import type { StaticItem } from '../src/shared/types.ts'
 
@@ -60,4 +60,14 @@ test('ccSeconds: the longest CC of each ability at max rank, skins left out', ()
   }
   assert.equal(ccSeconds(bin), 4) // 1 + 0.5 + 1.5 + 1
   assert.equal(ccSeconds({}), 0)
+})
+
+test('arrangeSets: ours first, Blitz sets and older LoLo sets gone, hand-made sets kept', () => {
+  const ours = (t: string) => t.startsWith('LoLo') || t.startsWith('Lolay')
+  const mine = { title: 'LoLo Ahri middle', uid: 'm' }
+  const sets = [{ title: 'Blitz.gg Ahri Mid', uid: 'b' }, { title: 'My Ahri', uid: 'u' }, { title: 'Lolay Ahri middle', uid: 'old' }]
+  assert.deepEqual(arrangeSets(sets, mine, ours).map((x) => x.uid), ['m', 'u'])
+  assert.equal(setsDisturbed([mine, { title: 'My Ahri', uid: 'u' }], 'm'), false)
+  assert.equal(setsDisturbed([{ title: 'My Ahri', uid: 'u' }, mine], 'm'), true)
+  assert.equal(setsDisturbed([mine, { title: 'BLITZ Ahri', uid: 'b' }], 'm'), true)
 })
