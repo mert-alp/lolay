@@ -297,6 +297,14 @@ export interface AppState {
   lang: Lang // effective language
   tier: Tier // effective Lolalytics tier
   dataVersion: string | null // ddragon version
+  postGame: PostGame | null // the game that just ended, from its end until the next champ select
+}
+
+// the end-of-game screen: Blitz's copy of the match, the League client's until Blitz has it
+export interface PostGame {
+  id: string // "TR1_123"
+  entry: MatchEntry | null // null while neither has it yet
+  src: 'blitz' | 'lcu' | null
 }
 
 export interface ApplyRequest {

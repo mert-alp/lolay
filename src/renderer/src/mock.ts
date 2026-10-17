@@ -1,7 +1,7 @@
 // Dev-only fallback so the renderer can be previewed in a plain browser (no Electron preload).
 // Hash flags: #readycheck, #champselect (no pick yet: Öneriler tab), #champselect-ban (same, my ban turn; the Tüm Şampiyonlar tab picks bans), #champselect-hover (hovering Ekko vs the enemy Vi: Build tab, "Ekko vs Vi" page first), #champselect-locked (locked, mid-import), #live (in game), #livecs (champ select roster), #connected (empty live page)
 import { LANES } from '@shared/types'
-import { mockProfileGet, mockProfileMatch, mockProfileMatches, mockSearch } from './mockProfile'
+import { mockPostGame, mockProfileGet, mockProfileMatch, mockProfileMatches, mockSearch } from './mockProfile'
 import type { AppState, BanPick, Build, DraftChamp, DraftRecommendation, Damage, Lane, LiveMatchState, LivePlayer, LolayApi, Matchup, MetaQuery, MetaResult, MetaRow, PlayerSummary, Settings, Source, StaticData } from '@shared/types'
 
 const DD = 'https://ddragon.leagueoflegends.com'
@@ -187,6 +187,7 @@ export function installMock() {
   let aramChamp = 103 // #champselect-aram: my champion, changed by a bench swap
   let bench = [222, 25, 99, 51, 432]
   let rerolls = 1
+  const postGame = mockPostGame()
   const state = (): AppState => {
     const h = location.hash
     const cs = h.includes('champselect')
@@ -196,7 +197,8 @@ export function installMock() {
     return {
       lcu: cs || live || h.includes('readycheck') || h.includes('connected') ? 'connected' : 'disconnected',
       summoner: h.includes('connected') || cs || live || h.includes('readycheck') ? { name: 'Schelter', iconId: 1, soloTier: 'EMERALD', soloDivision: 'IV' } : null,
-      phase: h.includes('readycheck') ? 'ReadyCheck' : cs ? 'ChampSelect' : live ? live.phase : 'None',
+      phase: h.includes('readycheck') ? 'ReadyCheck' : cs ? 'ChampSelect' : live ? live.phase : h.includes('postgame') ? 'EndOfGame' : 'None',
+      postGame: h.includes('postgame') ? postGame : null,
       readyCheck: h.includes('readycheck') ? { playerResponse: 'None', timer: 2, autoAcceptAt: Date.now() + 3200, queue: 'Dereceli Tek/Çift', bgChampionId: 103 } : null,
       live,
       champSelect: cs

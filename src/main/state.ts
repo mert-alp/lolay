@@ -27,7 +27,8 @@ export function initState() {
     settings: getSettings(),
     lang: 'en',
     tier: 'all',
-    dataVersion: null
+    dataVersion: null,
+    postGame: null
   })
 }
 

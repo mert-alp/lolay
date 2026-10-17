@@ -2,6 +2,8 @@ import type { AppState, LivePlayer, StaticData } from '@shared/types'
 import { useT, type Key } from '../i18n'
 import { PlayerRow, ROW_GRID } from '../components/PlayerCard'
 import { Card } from '../components/ui'
+import { PostGame } from '../components/PostGame'
+import { useState } from 'react'
 
 function Team({ title, players, st, enemy, onPick }: { title: string; players: LivePlayer[]; st: StaticData | null; enemy: boolean; onPick: (championId: number) => void }) {
   const t = useT()
@@ -26,6 +28,9 @@ export function LiveMatch({ state, st, onPick }: { state: AppState; st: StaticDa
   const live = state.live
   const phaseKey = `phase.${state.phase}` as Key
   const phase = t(phaseKey) === phaseKey ? state.phase : t(phaseKey)
+
+  const [closed, setClosed] = useState<string | null>(null)
+  if (!live && state.postGame && closed !== state.postGame.id) return <PostGame pg={state.postGame} st={st} onClose={() => setClosed(state.postGame!.id)} />
 
   if (!live) {
     return (

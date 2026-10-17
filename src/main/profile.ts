@@ -319,7 +319,10 @@ export function createProfile(d: ProfileDeps) {
     }
   }
 
-  return { get, matches, match, prune }
+  // a match found elsewhere (the end-of-game screen) is served from here, so its detail opens without a fetch
+  const remember = (dt: MatchDetail) => store(dt)
+
+  return { get, matches, match, prune, remember }
 }
 
 export type ProfileService = ReturnType<typeof createProfile>

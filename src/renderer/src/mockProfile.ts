@@ -1,5 +1,5 @@
 // Dev-only profile data for the browser preview (see mock.ts). Hash flags: #profile-nokey, #profile-slow
-import type { MatchDetail, MatchPlayer, MatchesQuery, Profile, ProfileQuery, ProfileResult, MatchEntry, Lane, SearchQuery, SearchResponse, SearchResult } from '@shared/types'
+import type { MatchDetail, MatchPlayer, PostGame, MatchesQuery, Profile, ProfileQuery, ProfileResult, MatchEntry, Lane, SearchQuery, SearchResponse, SearchResult } from '@shared/types'
 import { entryOf, FILTER_QUEUES } from '../../main/profileStats.ts'
 
 const CHAMPS = [103, 86, 64, 222, 412, 238, 157, 11, 51, 117, 61, 134, 84, 7, 245, 121, 80, 59, 19, 105, 266, 202, 21, 498, 360, 777, 54, 90]
@@ -119,4 +119,14 @@ export async function mockSearch({ query }: SearchQuery): Promise<SearchResponse
     return { gameName: casing, tagLine: tg, iconId: 1 + (h % 40), level: 20 + (h % 380), rank: i % 3 === 2 ? null : { tier: tiers[h % tiers.length], division: ['I', 'II', 'III', 'IV'][h % 4], lp: h % 100 }, region: 'TR', source: i === 0 ? 'opgg' : 'local' }
   })
   return { results }
+}
+
+// #postgame: a won ranked game of "me", already in the detail map so its table opens
+export function mockPostGame(): PostGame {
+  for (let i = 0; i < 40; i++) {
+    const d = build(hashOf('me') % 997, i, 'me')
+    const e = entryOf(d, 'me')
+    if (e && e.win && !e.remake && d.queueId === 420) return { id: d.id, entry: e, src: 'blitz' }
+  }
+  return { id: 'none', entry: null, src: null }
 }

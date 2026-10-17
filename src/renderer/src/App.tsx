@@ -50,6 +50,10 @@ export default function App() {
     prev.current = state?.phase
   }, [state?.phase])
 
+  // a finished game opens its end-of-game screen
+  const pgId = state?.postGame?.id
+  useEffect(() => { if (pgId) setPage('live') }, [pgId])
+
   // follow the hovered/locked champion and lane
   const cs = state?.champSelect
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function App() {
                 {page === 'home' ? (
                   <Home state={state} st={st} onPick={pick} />
                 ) : page === 'profile' ? (
-                  <Profile target={profileId} st={st} />
+                  <Profile key={pgId ?? 'profile'} target={profileId} st={st} />
                 ) : page === 'meta' ? (
                   <Meta state={state} st={st} onPick={pick} />
                 ) : page === 'live' ? (

@@ -7,10 +7,12 @@ import { createPlayerIndex, createPlayerSearch } from './playerSearch.ts'
 import { createBlitzSummoner } from './providers/blitzSummoner.ts'
 import { createOpggSummoner } from './providers/opggSummoner.ts'
 import { createProfile, safe } from './profile.ts'
+import { detailFromLcu, detailFromRiot, entryOf } from './profileStats.ts'
 import { platformOf } from './riotApi.ts'
 import type { Platform } from './riotApi.ts'
 import { riot } from './riotService.ts'
-import { onState } from './state.ts'
+import { getState, onState, setState } from './state.ts'
+import type { MatchDetail } from '../shared/types.ts'
 
 async function lcuGet(path: string): Promise<any> {
   try {
@@ -53,6 +55,49 @@ export function registerProfileIpc() {
     if (s.live) void index.add([...s.live.myTeam, ...s.live.enemyTeam].flatMap((p) => (p.name && p.tag ? [{ gameName: p.name, tagLine: p.tag }] : [])))
   })
   app.on('before-quit', () => void index.flush())
+
+  // ---- end of game: the match from Blitz (the League client's own copy until Blitz has it), then fresh profile lists
+  let lastPhase = ''
+  let postGameRun = 0
+  onState((s) => {
+    if (s.phase === lastPhase) return
+    const prev = lastPhase
+    lastPhase = s.phase
+    if (s.phase === 'ChampSelect' && s.postGame) setState({ postGame: null })
+    if ((s.phase === 'EndOfGame' || s.phase === 'PreEndOfGame') && prev !== 'EndOfGame' && prev !== 'PreEndOfGame') void postGame(++postGameRun)
+  })
+
+  const POST_TRIES = 18 // every 10 s for 3 minutes: Blitz usually has the match within one or two
+  async function postGame(run: number) {
+    const [flow, me] = await Promise.all([lcuGet('/lol-gameflow/v1/session'), lcuGet('/lol-summoner/v1/current-summoner')])
+    const gameId = Number(flow?.gameData?.gameId)
+    if (!gameId || !me?.puuid) return
+    await refreshMine()
+    const id = `${mine.platform.toUpperCase()}_${gameId}`
+    const who = { puuid: me.puuid, gameName: me.gameName, tagLine: me.tagLine }
+    const show = async (d: MatchDetail, src: 'blitz' | 'lcu') => {
+      await svc.remember(d)
+      const entry = entryOf(d, who)
+      if (entry && run === postGameRun) setState({ postGame: { id, entry, src } })
+      return !!entry
+    }
+    setState({ postGame: { id, entry: null, src: null } })
+    let lcuShown = false
+    for (let i = 0; i < POST_TRIES && run === postGameRun && getState().postGame?.id === id; i++) {
+      const m = await blitz.match(id).catch(() => null)
+      if (m && (await show(detailFromRiot(m), 'blitz'))) break
+      if (!lcuShown) {
+        const g = await lcuGet(`/lol-match-history/v1/games/${gameId}`)
+        const d = g && detailFromLcu(g, mine.platform)
+        if (d) lcuShown = await show(d, 'lcu')
+      }
+      blitz.clear() // the 404 is cached otherwise
+      await new Promise((r) => setTimeout(r, 10_000))
+    }
+    // the profile's lists: OP.GG re-crawls my account, Blitz is asked again
+    const acc = me.gameName && me.tagLine ? await opgg.account(mine.platform, me.gameName, me.tagLine).catch(() => null) : null
+    if (acc) await opgg.renew(mine.platform, acc.puuid).catch(() => {})
+  }
 
   ipcMain.handle(IPC.searchPlayers, async (_e, q: SearchQuery) => {
     await refreshMine()
