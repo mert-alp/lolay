@@ -84,10 +84,10 @@ async function applyItems(build: Build, title: string, lang: Lang): Promise<'ski
     {
       title,
       type: 'custom',
-      map: 'SR',
-      mode: 'CLASSIC',
+      map: build.queue ? 'HA' : 'SR',
+      mode: build.queue ? 'ARAM' : 'CLASSIC',
       associatedChampions: [build.championId],
-      associatedMaps: [11],
+      associatedMaps: [build.queue ? 12 : 11],
       preferredItemSlots: [],
       sortrank: 0,
       startedFrom: 'blank',
@@ -119,9 +119,9 @@ export async function applyBuild(req: ApplyRequest): Promise<ApplyResult> {
   }
   try {
     const name = (await getStatic()).champions[req.championId]?.name ?? String(req.championId)
-    const title = `${PREFIX} ${name} ${req.lane}`
+    const title = `${PREFIX} ${name} ${req.queue ? 'ARAM' : req.lane}`
     let build: Build | undefined
-    const load = async () => (build ??= await getBuild({ championId: req.championId, lane: req.lane }))
+    const load = async () => (build ??= await getBuild({ championId: req.championId, lane: req.lane, queue: req.queue }))
     if (req.perks || req.runeIndex !== undefined) await part('runes', async () => applyRunes(req.perks ?? (await load()).runes[req.runeIndex!]?.perks, title))
     if (req.spells) await part('spells', async () => applySpells(req.spellIds ?? (await load()).spells[0]?.ids))
     if (req.items) await part('items', async () => applyItems(await load(), title, getState().lang))

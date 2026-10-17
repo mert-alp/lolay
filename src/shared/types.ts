@@ -81,6 +81,7 @@ export interface Build {
   counters: { strong: Matchup[]; weak: Matchup[] } // strong = we beat them, weak = they beat us
   partial: boolean // true when key sections are missing (provider fallback or incomplete page)
   damage?: Damage | null // Lolalytics only: average damage split of the champion, absolute numbers
+  queue?: 'aram' // an ARAM build: `lane` means nothing then
   timeWr?: (number | null)[] // Lolalytics only: win rate per game length, TIME_BUCKETS minutes; null = no games
   insufficient?: true // the source has too little data for this champion/lane/rank; every list is empty
   fetchedAt: number
@@ -101,6 +102,7 @@ export interface BuildQuery {
   lane?: Lane // omitted = champion's default lane
   tier?: Tier // omitted = effective tier from state
   fresh?: boolean // bypass cache
+  queue?: 'aram' // ARAM build (Howling Abyss): always Lolalytics, lane ignored
 }
 
 // Static Data Dragon data, localized
@@ -234,6 +236,7 @@ export interface ChampSelectState {
   myTurn: boolean // that action is in progress
   phase: 'ban' | 'pick' | 'waiting' | 'done' // my open ban / pick action in progress; waiting = a later action of mine; done = none left
   endsAt: number | null // epoch ms when the current turn runs out; null = unknown
+  aram: boolean // Howling Abyss (ARAM, ARAM Mayhem): ARAM builds, the bench instead of lanes
 }
 
 export type LiveTag = 'autofill' | 'offrole' | 'otp'
@@ -294,6 +297,7 @@ export interface AppState {
 export interface ApplyRequest {
   championId: number
   lane: Lane
+  queue?: 'aram' // ARAM build and a Howling Abyss item set
   runeIndex?: number // index into build.runes; omitted = skip runes
   perks?: number[] // the exact displayed rune page; wins over runeIndex
   spells?: boolean
@@ -341,6 +345,18 @@ export interface DraftChamp {
   out: boolean // already banned or taken
   none?: true // watchlist champion without data in my lane (the numbers are 0)
 }
+// ARAM champ select: my champion and the bench, rated by the ARAM tier list
+export interface BenchChamp {
+  championId: number
+  tier: string // '' = no ARAM data
+  wr: number
+}
+export interface DraftBench {
+  mine: BenchChamp | null
+  bench: BenchChamp[] // best first
+  rerolls: number | null // null = no rerolls in this mode
+}
+
 export interface DraftRecommendation {
   favorites: number[] // my most played champions in this lane that I can pick now
   picks: DraftPick[] // best first
@@ -497,6 +513,9 @@ export interface LolayApi {
   draftLock(championId: number): Promise<boolean>
   draftBan(championId: number, complete: boolean): Promise<boolean> // hover my ban; complete = also lock it in
   draftSetSpells(spell1Id: number, spell2Id: number): Promise<boolean>
+  draftBench(): Promise<DraftBench | null> // null = not in an ARAM champ select
+  draftBenchSwap(championId: number): Promise<boolean>
+  draftReroll(): Promise<boolean>
   queueNames(): Promise<Record<number, string>> // the client's own queue names, {} without the client
 }
 
@@ -524,5 +543,8 @@ export const IPC = {
   draftLock: 'draft:lock',
   draftBan: 'draft:ban',
   draftSetSpells: 'draft:setSpells',
-  queueNames: 'queues:names'
+  queueNames: 'queues:names',
+  draftBench: 'draft:bench',
+  draftBenchSwap: 'draft:benchSwap',
+  draftReroll: 'draft:reroll'
 } as const

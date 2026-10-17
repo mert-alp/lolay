@@ -7,6 +7,8 @@ export interface CsSession {
   theirTeam?: { championId: number; assignedPosition?: string }[]
   actions: { id?: number; actorCellId: number; type: string; completed: boolean; championId?: number; isInProgress?: boolean }[][]
   timer?: { adjustedTimeLeftInPhase?: number; isInfinite?: boolean } // not in a recorded fixture yet: optional everywhere
+  benchChampions?: { championId: number }[] // ARAM
+  rerollsRemaining?: number
 }
 
 export interface Selection {

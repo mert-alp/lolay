@@ -63,5 +63,9 @@ const cached = createCache()
 export const getTierList = (lane: Lane, tier: Tier): Promise<TierList> =>
   cached(`list:${lane}:${tier}`, async () => parseTierList(await fetchJson({ ep: 'list', lane, tier })))
 
+// ARAM has no lanes: one list for the whole map
+export const getAramList = (tier: Tier): Promise<TierList> =>
+  cached(`list:aram:${tier}`, async () => parseTierList(await fetchJson({ ep: 'list', queue: 'aram', tier })))
+
 export const getMatchups = (slug: string, lane: Lane, tier: Tier): Promise<Matchups> =>
   cached(`vs:${slug}:${lane}:${tier}`, async () => parseMatchups(await fetchJson({ ep: 'counter', c: slug, lane, tier })))

@@ -7,6 +7,7 @@ export interface ProviderQuery {
   championId: number
   lane?: Lane
   tier: Tier
+  queue?: 'aram' // only Lolalytics has ARAM builds
 }
 export type Provider = (q: ProviderQuery) => Promise<Build>
 

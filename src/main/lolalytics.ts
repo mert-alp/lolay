@@ -200,12 +200,12 @@ export function createLolalytics(opts: { cacheDir: string; slugOf: (championId: 
     } catch {}
   }
 
-  return async ({ championId, lane, tier }) => {
+  return async ({ championId, lane, tier, queue }) => {
     await loadChampPath()
     const slug = champPathSlug(championId) ?? opts.slugOf(championId)
     let build: Build
     try {
-      const html = await (await get(`${BASE}/${slug}/build/?${query({ lane, tier })}`)).text()
+      const html = await (await get(queue ? `${BASE}/${slug}/aram/build/?${query({ tier })}` : `${BASE}/${slug}/build/?${query({ lane, tier })}`)).text()
       const { data, champPath: cp } = parseQwik(html)
       if (cp) {
         champPath = cp
@@ -215,7 +215,7 @@ export function createLolalytics(opts: { cacheDir: string; slugOf: (championId: 
       if (!data) throw new Error('Lolalytics page has no loader data')
       build = toBuild(data, tier)
     } catch (e) {
-      if (!transient(e)) throw e // 404, no data, a parse bug: the JSON API would not help
+      if (!transient(e) || queue) throw e // 404, no data, a parse bug: the JSON API would not help (and has no ARAM)
       console.error('Lolalytics page failed, using the JSON API', e)
       const url = `${API}?${query({ ep: 'rune', v: '1', c: slug, lane, tier, queue: 'ranked', region: 'all' })}`
       try {
@@ -227,6 +227,7 @@ export function createLolalytics(opts: { cacheDir: string; slugOf: (championId: 
     }
     build.championId = championId
     build.slug = slug
+    if (queue) build.queue = queue
     return build
   }
 }

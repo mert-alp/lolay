@@ -32,7 +32,7 @@ const providers: Record<Source, Provider> = {
   ugg: createUgg({ getStatic: staticNow }),
   metasrc: createMetasrc({ getStatic: staticNow })
 }
-export const builds = createBuildCache({ cacheDir, fetchBuild: ({ source, championId, lane, tier }) => providers[source]({ championId, lane, tier }) })
+export const builds = createBuildCache({ cacheDir, fetchBuild: ({ source, championId, lane, tier, queue }) => providers[source]({ championId, lane, tier, queue }) })
 
 // every consumer goes through here so the champion id -> slug table is always loaded
 export async function getStatic(): Promise<StaticData> {
@@ -43,7 +43,7 @@ export async function getStatic(): Promise<StaticData> {
 export async function getBuild(q: BuildQuery, onRefresh?: (b: Build) => void): Promise<Build> {
   await getStatic()
   const { settings, tier } = getState()
-  return builds.getBuild({ ...q, source: settings.source, tier: q.tier ?? tier }, onRefresh)
+  return builds.getBuild({ ...q, source: q.queue ? 'lolalytics' : settings.source, tier: q.tier ?? tier }, onRefresh)
 }
 
 const runeCache = createValueCache({ cacheDir })

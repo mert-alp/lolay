@@ -68,3 +68,12 @@ test('a failing background refresh is logged and the cached build is still serve
     errors.mock.restore()
   }
 })
+
+test('an ARAM build has its own cache file, apart from the Rift build of the same champion', async () => {
+  const cacheDir = await dir()
+  const cache = createBuildCache({ cacheDir, fetchBuild: async (x) => build({ queue: x.queue }) })
+  await cache.getBuild({ ...q, lane: 'middle' })
+  const aram = await cache.getBuild({ ...q, queue: 'aram' })
+  assert.equal(aram.queue, 'aram')
+  assert.deepEqual((await readdir(cacheDir)).sort(), ['build_lolalytics_103_aram_emerald_plus.json', 'build_lolalytics_103_middle_emerald_plus.json'])
+})

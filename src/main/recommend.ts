@@ -1,4 +1,4 @@
-import type { CounterPick, DraftChamp, DraftPick, DraftPool, Lane } from '../shared/types.ts'
+import type { BenchChamp, CounterPick, DraftBench, DraftChamp, DraftPick, DraftPool, Lane } from '../shared/types.ts'
 import type { CsSession } from './champSelect.ts'
 import type { Matchups, TierList, TierRow } from './tierlist.ts'
 
@@ -148,5 +148,17 @@ export function rateStrips(list: TierList, available: Set<number>, taken: Set<nu
     watch,
     popular: top('pr', inLane.filter((r) => available.has(r.championId))).map((r) => chip(r, false)),
     banned: top('br', inLane).map((r) => chip(r, taken.has(r.championId)))
+  }
+}
+
+// ARAM: my champion and the bench rated by the ARAM tier list, the bench best first
+export function rankBench(session: CsSession, list: TierList): DraftBench {
+  const rate = (id: number): BenchChamp => ({ championId: id, tier: list[id]?.tier ?? '', wr: list[id]?.wr ?? 0 })
+  const me = session.myTeam?.find((p) => p.cellId === session.localPlayerCellId)
+  const bench = (session.benchChampions ?? []).map((b) => b?.championId).filter(isId).map(rate)
+  return {
+    mine: me && isId(me.championId) ? rate(me.championId) : null,
+    bench: bench.sort((a, b) => b.wr - a.wr),
+    rerolls: typeof session.rerollsRemaining === 'number' ? session.rerollsRemaining : null
   }
 }

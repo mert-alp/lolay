@@ -95,10 +95,11 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
   const live = useRef(cs)
   live.current = cs
   const auto = cs.championId === build.championId
+  const prefLane = build.queue ?? build.lane // ARAM keeps its own page and spells per champion
   const send = async (req: Omit<ApplyRequest, 'championId' | 'lane'>) => {
     if (live.current.championId !== build.championId) return null
     try {
-      const r = await window.lolay.applyBuild({ championId: build.championId, lane: build.lane, ...req })
+      const r = await window.lolay.applyBuild({ championId: build.championId, lane: build.lane, queue: build.queue, ...req })
       return !r.error && r.runes !== 'error' && r.items !== 'error'
     } catch {
       return false
@@ -117,8 +118,9 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
         st={st}
         editBase={`${build.championId}:${build.lane}`}
         keystone={build.runeStatsLevel === 'keystone'}
-        saved={settings.runePrefs[prefKey(build.championId, build.lane) ?? '']}
-        onSave={(perks) => { const k = prefKey(build.championId, build.lane); if (k) saveRunePref(settings, k, perks) }}
+        more={!build.queue}
+        saved={settings.runePrefs[prefKey(build.championId, prefLane) ?? '']}
+        onSave={(perks) => { const k = prefKey(build.championId, prefLane); if (k) saveRunePref(settings, k, perks) }}
         onApply={(perks, runeIndex) => onApply({ runeIndex, perks }, 'runes')}
         auto={auto ? (perks, _i, picked) => send({ perks, ...(picked && settings.autoImport.items && { items: true }) }) : undefined}
       />
@@ -126,7 +128,7 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         <Card className="p-4">
           <Eyebrow>{t('spells.title')}</Eyebrow>
-          <SpellControl pairs={build.spells} st={st} settings={settings} cs={auto ? cs : null} championId={build.championId} toast={toast} saved={settings.spellPrefs[prefKey(build.championId, build.lane) ?? '']} />
+          <SpellControl pairs={build.spells} st={st} settings={settings} cs={auto ? cs : null} championId={build.championId} toast={toast} saved={settings.spellPrefs[prefKey(build.championId, prefLane) ?? '']} />
         </Card>
         <Card className="p-4">
           <SkillOrder order={build.skillOrder} priority={build.skillPriority} />
@@ -168,7 +170,7 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
 
       {build.timeWr && <PowerCurve wr={build.timeWr} />}
 
-      <Card className="p-4">
+      {!build.queue && <Card className="p-4">
         <Eyebrow
           right={
             <span className="text-[11.5px] text-mute">
@@ -187,7 +189,7 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
           <Matchups title={t('counters.strong')} list={build.counters.strong} st={st} enemyId={enemyId} />
           <Matchups title={t('counters.weak')} list={build.counters.weak} st={st} enemyId={enemyId} />
         </div>
-      </Card>
+      </Card>}
     </div>
   )
 }

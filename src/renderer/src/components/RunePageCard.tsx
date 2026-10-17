@@ -118,15 +118,16 @@ export function RunePageCard({ title, page, championId, st, editKey, onApply, on
 }
 
 // the build's own pages first, replaced by the richer list (matchup, variants, pro games) once it arrives
-export function useRunePages(base: RunePage[], championId: number, lane: Lane, vsLaner?: number, vsJungler?: number): RunePage[] {
+export function useRunePages(base: RunePage[], championId: number, lane: Lane, vsLaner?: number, vsJungler?: number, more = true): RunePage[] {
   const key = `${championId}:${lane}:${vsLaner ?? ''}:${vsJungler ?? ''}`
-  const [more, setMore] = useState<{ key: string; pages: RunePage[] } | null>(null)
+  const [extra, setMore] = useState<{ key: string; pages: RunePage[] } | null>(null)
   useEffect(() => {
+    if (!more) return
     let live = true
     window.lolay.getRunePages({ championId, lane, vsLaner, vsJungler }).then((pages) => live && pages.length > 0 && setMore({ key, pages })).catch(() => {})
     return () => { live = false }
   }, [key])
-  return more?.key === key ? more.pages : base
+  return more && extra?.key === key ? extra.pages : base
 }
 
 type Sort = 'best' | 'wr' | 'common' | 'pro'
@@ -201,14 +202,15 @@ interface SectionProps {
   onApply?: (perks: number[], index: number) => void // explicit Apply button (champ select only)
   // champ select: choosing a page or finishing an edit goes to the client by itself; resolves true = ok, null = skipped
   auto?: (perks: number[], index: number, picked: boolean) => Promise<boolean | null>
+  more?: boolean // false = only the build's own pages (ARAM: the other sources are Summoner's Rift)
 }
 
 interface Entry { key: string; page: RunePage; orig: number; mine?: true }
 
 // All rune pages of a build: a selectable list and the chosen page large, with the editor.
-export function RuneSection({ pages: base, championId, lane, vsLaner, vsJungler, st, editBase, keystone, saved, onSave, onApply, auto }: SectionProps) {
+export function RuneSection({ pages: base, championId, lane, vsLaner, vsJungler, st, editBase, keystone, saved, onSave, onApply, auto, more = true }: SectionProps) {
   const t = useT()
-  const pages = useRunePages(base, championId, lane, vsLaner, vsJungler)
+  const pages = useRunePages(base, championId, lane, vsLaner, vsJungler, more)
   const entries = useMemo<Entry[]>(() => {
     const list = pages.map((page, orig) => ({ key: String(orig), page, orig }))
     return saved ? [{ key: 'mine', orig: -1, mine: true as const, page: { wr: 0, n: 0, perks: saved, label: t('runes.mine') } }, ...list] : list

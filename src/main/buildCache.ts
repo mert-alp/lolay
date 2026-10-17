@@ -12,6 +12,7 @@ export interface CacheQuery {
   lane?: Lane
   tier: Tier
   fresh?: boolean
+  queue?: 'aram'
 }
 
 // a build with nothing in it: the source has too little data for this champion/lane/rank
@@ -62,7 +63,7 @@ export function createBuildCache(opts: { cacheDir: string; fetchBuild: (q: Cache
   const inflight = new Map<string, Promise<Build>>()
 
   const fileOf = (q: CacheQuery, lane: Lane | undefined) =>
-    `${PREFIX}${q.source}_${q.championId}_${lane ?? 'default'}_${q.source === 'metasrc' ? 'all' : q.tier}.json` // metasrc ignores the rank filter
+    `${PREFIX}${q.source}_${q.championId}_${q.queue ?? lane ?? 'default'}_${q.source === 'metasrc' ? 'all' : q.tier}.json` // metasrc ignores the rank filter
 
   function refresh(file: string, q: CacheQuery): Promise<Build> {
     let p = inflight.get(file)

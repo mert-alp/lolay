@@ -181,10 +181,14 @@ export function installMock() {
   const listeners = new Set<(s: AppState) => void>()
   let picked = 0 // champion hovered through the mock API
   let spells: [number, number] = [4, 14]
+  let aramChamp = 103 // #champselect-aram: my champion, changed by a bench swap
+  let bench = [222, 25, 99, 51, 432]
+  let rerolls = 1
   const state = (): AppState => {
     const h = location.hash
     const cs = h.includes('champselect')
     const ban = h.includes('champselect-ban')
+    const aram = h.includes('champselect-aram')
     const live = h.includes('livecs') ? liveState(true) : h.includes('#live') ? liveState(false) : cs ? csStrip() : null
     return {
       lcu: cs || live || h.includes('readycheck') || h.includes('connected') ? 'connected' : 'disconnected',
@@ -193,9 +197,11 @@ export function installMock() {
       readyCheck: h.includes('readycheck') ? { playerResponse: 'None', timer: 2, autoAcceptAt: Date.now() + 3200, queue: 'Dereceli Tek/Çift', bgChampionId: 103 } : null,
       live,
       champSelect: cs
-        ? h.includes('locked')
-          ? { championId: 245, lane: 'jungle', locked: true, imported: false, importing: true, importResult: { runes: 'ok', spells: 'ok' }, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: null, myTurn: false, phase: 'done', endsAt: null }
-          : { championId: picked || (h.includes('hover') ? 245 : 0), lane: 'jungle', locked: false, imported: false, importing: false, importResult: null, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: 8, myTurn: !ban, phase: ban ? 'ban' : 'pick', endsAt: TURN_ENDS }
+        ? aram
+          ? { championId: aramChamp, lane: null, locked: true, imported: true, importing: false, importResult: { runes: 'ok', spells: 'ok', items: 'ok' }, autoImportAllowed: true, spell1Id: 4, spell2Id: 32, pickActionId: null, myTurn: false, phase: 'done', endsAt: TURN_ENDS, aram: true }
+          : h.includes('locked')
+          ? { championId: 245, lane: 'jungle', locked: true, imported: false, importing: true, importResult: { runes: 'ok', spells: 'ok' }, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: null, myTurn: false, phase: 'done', endsAt: null, aram: false }
+          : { championId: picked || (h.includes('hover') ? 245 : 0), lane: 'jungle', locked: false, imported: false, importing: false, importResult: null, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: 8, myTurn: !ban, phase: ban ? 'ban' : 'pick', endsAt: TURN_ENDS, aram: false }
         : null,
       settings,
       lang: settings.lang ?? 'tr',
@@ -235,6 +241,13 @@ export function installMock() {
     draftLock: async () => true,
     draftBan: async () => true,
     queueNames: async () => ({}),
+    draftBench: async () => {
+      if (!location.hash.includes('champselect-aram')) return null
+      const rate = (id: number) => ({ championId: id, tier: ['S', 'A+', 'A', 'B+', 'B', 'C'][id % 6], wr: +(48 + (id % 9) * 0.7).toFixed(1) })
+      return { mine: rate(aramChamp), bench: bench.map(rate).sort((a, b) => b.wr - a.wr), rerolls }
+    },
+    draftBenchSwap: async (id) => { bench = [...bench.filter((b) => b !== id), aramChamp]; aramChamp = id; emit(); return true },
+    draftReroll: async () => { if (!rerolls) return false; rerolls--; bench = [...bench, aramChamp]; aramChamp = 89; emit(); return true },
     draftSetSpells: async (a, b) => { spells = [a, b]; if (a === 4 || b === 4) settings = { ...settings, flashOn: b === 4 ? 'F' : 'D' }; emit(); return true }
   }
   window.lolay = api

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { champIcon, DDRAGON, spellIcon, type AppState, type MetaResult, type MetaRow, type Tier, type ApplyRequest, type Build, type Damage, type DraftPool, type DraftRecommendation, type LivePlayer, type StaticData } from '@shared/types'
+import { champIcon, DDRAGON, spellIcon, type AppState, type DraftBench, type MetaResult, type MetaRow, type Tier, type ApplyRequest, type Build, type Damage, type DraftPool, type DraftRecommendation, type LivePlayer, type StaticData } from '@shared/types'
 import { damagePct, teamDamage } from '@shared/damage'
 import { useT, type Key } from '../i18n'
 import { RANK_TEXT, fmtGames, tagsOf, tierColor, wrColor } from '../util'
 import { Card } from '../components/ui'
 import { BuildPanel } from '../components/BuildPanel'
 import { Recommendations } from '../components/Recommendations'
+import { Bench } from '../components/Bench'
 import { ChampionPicker } from '../components/ChampionPicker'
 import { ImportChip, PARTS, partStates } from '../components/ImportRow'
 import { Chip, Sk, TAG_STYLE, kdaColor } from '../components/PlayerCard'
@@ -18,7 +19,7 @@ const ONE_SIDED = 70
 const bkey = (id: number, lane?: string | null) => `${id}:${lane ?? ''}`
 
 // each build is requested once (main caches them); null = failed, stays out of the damage numbers
-function useBuilds(wanted: { championId: number; lane?: LivePlayer['position'] }[], scope: string) {
+function useBuilds(wanted: { championId: number; lane?: LivePlayer['position'] }[], scope: string, queue?: 'aram') {
   const [map, setMap] = useState<Record<string, Build | null>>({})
   const sig = scope + wanted.map((w) => bkey(w.championId, w.lane)).join()
   useEffect(() => {
@@ -27,7 +28,7 @@ function useBuilds(wanted: { championId: number; lane?: LivePlayer['position'] }
       const k = scope + bkey(w.championId, w.lane)
       if (!w.championId || asked.has(k) || k in map) continue
       asked.add(k)
-      window.lolay.getBuild({ championId: w.championId, lane: w.lane ?? undefined })
+      window.lolay.getBuild({ championId: w.championId, lane: w.lane ?? undefined, queue })
         .then((b) => setMap((m) => ({ ...m, [k]: b })))
         .catch(() => setMap((m) => ({ ...m, [k]: null })))
     }
@@ -338,6 +339,24 @@ function useCountdown(endsAt: number | null) {
   return endsAt ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : null
 }
 
+// ARAM: the bench changes whenever anyone swaps or rerolls, which the page does not see; ask every 2 s
+function useBench(on: boolean, sig: number) {
+  const [bench, setBench] = useState<DraftBench | null>(null)
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    if (!on) return setBench(null)
+    const i = setInterval(() => setTick((n) => n + 1), 2000)
+    return () => clearInterval(i)
+  }, [on])
+  useEffect(() => {
+    if (!on) return
+    let live = true
+    window.lolay.draftBench().then((b) => live && setBench(b)).catch(() => {})
+    return () => { live = false }
+  }, [on, sig, tick])
+  return bench
+}
+
 type Tab = 'recs' | 'all' | 'build'
 
 const PHASE_STYLE = {
@@ -391,7 +410,9 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [myId, myLane, allies.map((p) => `${p.championId}:${p.position}:${p.bot}`).join(), enemies.map((p) => `${p.championId}:${p.position}`).join()]
   )
-  const build = useBuilds(wanted, `${state.tier}:${state.settings.source}:`)
+  const aram = !!cs?.aram
+  const build = useBuilds(wanted, `${state.tier}:${aram ? 'aram' : state.settings.source}:`, aram ? 'aram' : undefined)
+  const bench = useBench(aram, myId)
   const mine = myId ? build(myId, myLane) : null
   const mineOk = mine && !mine.insufficient ? mine : null
   const allyBuild = (p: LivePlayer) => (p.bot || !p.championId ? null : build(p.championId, p.position))
@@ -405,7 +426,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
   const [tab, setTab] = useState<Tab>('recs')
   // a hovered champion opens its build, except while choosing in the picker
   const toBuild = (cur: Tab): Tab => (cur === 'all' ? cur : 'build')
-  useEffect(() => { if (myId > 0) setTab(toBuild) }, [myId])
+  useEffect(() => { if (myId > 0 && !aram) setTab(toBuild) }, [myId]) // ARAM stays on the bench: swaps change the champion
 
   const phase = cs?.phase ?? 'done'
   const banning = phase === 'ban'
@@ -437,7 +458,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
   async function apply(req: Omit<ApplyRequest, 'championId' | 'lane'>, kind: 'runes' | 'spells' | 'items') {
     if (!mineOk) return
     try {
-      const r = await window.lolay.applyBuild({ championId: mineOk.championId, lane: mineOk.lane, ...req })
+      const r = await window.lolay.applyBuild({ championId: mineOk.championId, lane: mineOk.lane, queue: mineOk.queue, ...req })
       const v = r[kind]
       if (v === 'ok') toast(t(`apply.${kind}`), 'ok')
       else if (v === 'skipped') toast(t('apply.skipped'), 'info')
@@ -467,6 +488,18 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
     if (!(await ban(id, false))) setBanSel(0)
   }
   const choose = (id: number) => (banning ? hoverBan(id) : pick(id))
+  async function swap(id: number) {
+    try {
+      if (await window.lolay.draftBenchSwap(id)) return
+    } catch { /* toast below */ }
+    toast(t('bench.swapFail'), 'err')
+  }
+  async function reroll() {
+    try {
+      if (await window.lolay.draftReroll()) return
+    } catch { /* toast below */ }
+    toast(t('bench.rerollFail'), 'err')
+  }
   async function lock(id: number) {
     try {
       if (!(await window.lolay.draftLock(id))) toast(t('draft.lockFail'), 'err')
@@ -541,7 +574,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
             <div className="flex items-center gap-2">
               <h1 className="min-w-0 truncate text-[17px] sm:text-[19px] font-bold leading-tight tracking-tight">{banning ? banChamp?.name ?? t('draft.banNone') : champ?.name ?? t('draft.pickChamp')}</h1>
               {!banning && mineOk?.tierLabel && <span className="rounded-md border px-1.5 text-[12px] font-extrabold" style={{ color: tierCol, borderColor: tierCol + '77', background: tierCol + '1f' }}>{mineOk.tierLabel}</span>}
-              {(myLane ?? mineOk?.lane) && <Chip className="border-line bg-white/[.04] text-mute">{t(`lane.${myLane ?? mineOk!.lane}` as Key)}</Chip>}
+              {aram ? <Chip className="border-line bg-white/[.04] text-mute">ARAM</Chip> : (myLane ?? mineOk?.lane) && <Chip className="border-line bg-white/[.04] text-mute">{t(`lane.${myLane ?? mineOk!.lane}` as Key)}</Chip>}
             </div>
           </div>
           {cs && st && (
@@ -605,7 +638,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
       <Card className="relative overflow-hidden">
         <div className="relative flex flex-wrap items-center border-b border-line px-2 sm:px-3">
           <div className="flex gap-1 max-sm:w-full max-sm:border-b max-sm:border-line/60">
-            {tabBtn('recs', t('draft.tabRecs'))}
+            {tabBtn('recs', t(aram ? 'draft.tabBench' : 'draft.tabRecs'))}
             {tabBtn('all', t('draft.tabAll'))}
             {tabBtn('build', t('draft.tabBuild'))}
           </div>
@@ -619,7 +652,9 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
 
         <div className="relative bg-[#0f1218] p-3 sm:p-4">
           {tab === 'recs' ? (
-            myLane ? (
+            aram ? (
+              <Bench bench={bench} st={st} onSwap={swap} onReroll={reroll} />
+            ) : myLane ? (
               <Recommendations rec={rec} loading={recLoading} error={recError} st={st} currentId={myId} banning={banning} banSel={banSel} onChoose={choose} />
             ) : (
               <p className="py-10 text-center text-[12.5px] text-mute">{t('draft.noLane')}</p>

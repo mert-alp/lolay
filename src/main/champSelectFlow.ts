@@ -11,6 +11,7 @@ import { getState, setState } from './state.ts'
 import { alertTurn } from './win.ts'
 
 const SUMMONERS_RIFT = 11
+const HOWLING_ABYSS = 12 // ARAM and ARAM Mayhem
 const MATCHUP_WAIT = 8000
 
 let session: CsSession | null = null
@@ -25,6 +26,9 @@ let seenBans = new Set<number>() // my ban action ids already counted
 let watch: SpellWatch = { seen: null, ours: null }
 let turnKey: number | null = null // my action whose turn was last alerted
 let endsAt: number | null = null // read when the session arrives: refresh() also runs later
+
+// ARAM builds and their own spell / rune preferences ('aram' takes the lane's place in the key)
+const queueOf = () => (mapId === HOWLING_ABYSS ? ('aram' as const) : undefined)
 
 export function setMapId(id: number) {
   mapId = id
@@ -60,7 +64,7 @@ function refresh() {
   const sel = deriveSelection(session, { appliedKey })
   const key = selectionKey(sel.championId, sel.lane)
   const { autoImport } = getSettings()
-  const autoImportAllowed = mapId === SUMMONERS_RIFT && (autoImport.runes || autoImport.spells || autoImport.items)
+  const autoImportAllowed = (mapId === SUMMONERS_RIFT || mapId === HOWLING_ABYSS) && (autoImport.runes || autoImport.spells || autoImport.items)
   const doApply = sel.shouldApply && autoImportAllowed
   if (doApply) {
     appliedKey = key // set before awaiting so rapid session events cannot apply twice
@@ -78,7 +82,8 @@ function refresh() {
       autoImportAllowed,
       ...deriveTurn(session),
       phase: derivePhase(session),
-      endsAt
+      endsAt,
+      aram: !!queueOf()
     }
   })
   if (sel.championId) prefetch(sel, key)
@@ -99,7 +104,7 @@ function trackSpells(s: CsSession) {
   if (slot && slot !== cur.flashOn) patch.flashOn = slot
   if (r.change === 'user') {
     const sel = deriveSelection(s, { appliedKey })
-    const key = prefKey(sel.championId, sel.lane)
+    const key = prefKey(sel.championId, queueOf() ?? sel.lane)
     if (key && !samePair(cur.spellPrefs[key], now)) patch.spellPrefs = { ...cur.spellPrefs, [key]: now }
   }
   if (Object.keys(patch).length) setState({ settings: updateSettings(patch) })
@@ -107,10 +112,10 @@ function trackSpells(s: CsSession) {
 
 // warm the build cache; the renderer asks for the build itself
 function prefetch(sel: Selection, key: string) {
-  const k = `${key}:${getState().tier}:${getState().settings.source}`
+  const k = `${key}:${getState().tier}:${queueOf() ?? getState().settings.source}`
   if (k === prefetchKey) return
   prefetchKey = k
-  getBuild({ championId: sel.championId, lane: sel.lane ?? undefined }).catch(() => {})
+  getBuild({ championId: sel.championId, lane: sel.lane ?? undefined, queue: queueOf() }).catch(() => {})
 }
 
 // the default rune page against the enemy laner / jungler; the build's own first page when that takes too long
@@ -125,14 +130,15 @@ async function matchupPerks(championId: number, lane: Lane): Promise<number[] | 
 async function autoApply(sel: Selection, key: string) {
   try {
     const { autoImport } = getSettings()
-    const build = await getBuild({ championId: sel.championId, lane: sel.lane ?? undefined })
+    const queue = queueOf()
+    const build = await getBuild({ championId: sel.championId, lane: sel.lane ?? undefined, queue })
     if (build.insufficient) {
       failedKey = key // nothing to import, and nothing to retry
       return
     }
     // the user's own page and pair for this champion + lane win over the recommended ones
     const { runePrefs, spellPrefs, flashOn } = getSettings()
-    const k = prefKey(sel.championId, build.lane) ?? ''
+    const k = prefKey(sel.championId, queue ?? build.lane) ?? ''
     const own = runePrefs[k]
     const spellIds = spellPrefs[k]
     const pair = spellIds ?? build.spells[0]?.ids
@@ -140,7 +146,8 @@ async function autoApply(sel: Selection, key: string) {
     const res = await applyBuild({
       championId: sel.championId,
       lane: build.lane,
-      perks: autoImport.runes ? own ?? (await matchupPerks(build.championId, build.lane)) ?? build.runes[0]?.perks : undefined,
+      queue,
+      perks: autoImport.runes ? own ?? (queue ? null : await matchupPerks(build.championId, build.lane)) ?? build.runes[0]?.perks : undefined, // ARAM has no laner
       spells: autoImport.spells,
       spellIds,
       items: autoImport.items

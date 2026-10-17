@@ -1,16 +1,16 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/types.ts'
-import type { DraftPool, DraftRecommendation, Lane, Tier } from '../shared/types.ts'
+import type { DraftBench, DraftPool, DraftRecommendation, Lane, Tier } from '../shared/types.ts'
 import { deriveTurn } from './champSelect.ts'
 import type { CsSession } from './champSelect.ts'
 import { request } from './lcu.ts'
 import { toLane } from './liveRoster.ts'
 import { champPathSlug, slugFromDdragonId } from './lolalytics.ts'
-import { champPool, counterPicks, deriveBan, favoriteVs, favorites, findEnemies, myBanChips, rankPicks, rateStrips } from './recommend.ts'
+import { champPool, counterPicks, deriveBan, favoriteVs, favorites, findEnemies, myBanChips, rankBench, rankPicks, rateStrips } from './recommend.ts'
 import { getStatic } from './services.ts'
 import { updateSettings } from './settings.ts'
 import { getState, setState } from './state.ts'
-import { getMatchups, getTierList, type TierList } from './tierlist.ts'
+import { getAramList, getMatchups, getTierList, type TierList } from './tierlist.ts'
 
 const MAX_LIST = 18 // suggestions / counters sent; the UI shows 6 and expands to the rest
 
@@ -144,6 +144,18 @@ export async function recommend(): Promise<DraftRecommendation | null> {
   }
 }
 
+// ARAM: the bench by the ARAM tier list (no data = still listed, unrated)
+export async function bench(): Promise<DraftBench | null> {
+  const { champSelect: cs, tier } = getState()
+  if (!cs?.aram) return null
+  const [session, list] = await Promise.all([get(SESSION), getAramList(tier).catch(() => ({}))])
+  return session ? rankBench(session, list) : null
+}
+
+// endpoints from community LCU docs, not yet seen working on the live client
+export const benchSwap = (championId: number) => id(championId) && send('POST', `${SESSION}/bench/swap/${championId}`)
+export const reroll = () => send('POST', `${SESSION}/my-selection/reroll`)
+
 export function registerDraftIpc() {
   ipcMain.handle(IPC.draftRecommend, () => recommend())
   ipcMain.handle(IPC.draftPool, () => pool())
@@ -151,4 +163,7 @@ export function registerDraftIpc() {
   ipcMain.handle(IPC.draftLock, (_e, championId: number) => lock(championId))
   ipcMain.handle(IPC.draftBan, (_e, championId: number, complete: boolean) => ban(championId, complete === true))
   ipcMain.handle(IPC.draftSetSpells, (_e, a: number, b: number) => setSpells(a, b))
+  ipcMain.handle(IPC.draftBench, () => bench())
+  ipcMain.handle(IPC.draftBenchSwap, (_e, championId: number) => benchSwap(championId))
+  ipcMain.handle(IPC.draftReroll, () => reroll())
 }

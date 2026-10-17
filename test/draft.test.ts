@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { derivePhase, deriveTurn } from '../src/main/champSelect.ts'
 import type { CsSession } from '../src/main/champSelect.ts'
-import { champPool, counterPicks, deriveBan, favorites, favoriteVs, findEnemies, guessLaner, myBanChips, rankPicks, rateStrips, recordBans, scorePick } from '../src/main/recommend.ts'
+import { champPool, counterPicks, deriveBan, favorites, favoriteVs, findEnemies, guessLaner, myBanChips, rankBench, rankPicks, rateStrips, recordBans, scorePick } from '../src/main/recommend.ts'
 import { createCache, parseMatchups, parseTierList } from '../src/main/tierlist.ts'
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
@@ -220,4 +220,21 @@ test('favoriteVs: 100 - enemy wr, only with enough games', () => {
   const m = { 1: { wr: 45, n: 300 }, 2: { wr: 60, n: 10 } } as any
   assert.deepEqual(favoriteVs([1, 2, 3], m), { 1: 55 })
   assert.deepEqual(favoriteVs([1], null), {})
+})
+
+test('rankBench: the bench best first, unrated ones last, rerolls when the mode has them', () => {
+  const aram: CsSession = {
+    localPlayerCellId: 1,
+    myTeam: [{ cellId: 1, championId: 103, championPickIntent: 0, assignedPosition: '' }],
+    actions: [],
+    benchChampions: [{ championId: 1 }, { championId: 99999 }, { championId: 2 }],
+    rerollsRemaining: 2
+  }
+  const tl = { 103: { tier: 'A', wr: 51 }, 1: { tier: 'B', wr: 49.5 }, 2: { tier: 'S', wr: 53 } } as any
+  const b = rankBench(aram, tl)
+  assert.deepEqual(b.mine, { championId: 103, tier: 'A', wr: 51 })
+  assert.deepEqual(b.bench.map((x) => x.championId), [2, 1, 99999])
+  assert.equal(b.bench[2].tier, '')
+  assert.equal(b.rerolls, 2)
+  assert.equal(rankBench({ ...aram, rerollsRemaining: undefined }, tl).rerolls, null)
 })
