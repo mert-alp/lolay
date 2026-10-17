@@ -2,7 +2,7 @@
 // Hash flags: #readycheck, #champselect (no pick yet: Öneriler tab), #champselect-ban (same, my ban turn; the Tüm Şampiyonlar tab picks bans), #champselect-hover (hovering Ekko vs the enemy Vi: Build tab, "Ekko vs Vi" page first), #champselect-locked (locked, mid-import), #live (in game), #livecs (champ select roster), #connected (empty live page)
 import { LANES } from '@shared/types'
 import { mockProfileGet, mockProfileMatch, mockProfileMatches, mockSearch } from './mockProfile'
-import type { AppState, Build, DraftChamp, DraftRecommendation, Damage, Lane, LiveMatchState, LivePlayer, LolayApi, Matchup, MetaQuery, MetaResult, MetaRow, PlayerSummary, Settings, Source, StaticData } from '@shared/types'
+import type { AppState, BanPick, Build, DraftChamp, DraftRecommendation, Damage, Lane, LiveMatchState, LivePlayer, LolayApi, Matchup, MetaQuery, MetaResult, MetaRow, PlayerSummary, Settings, Source, StaticData } from '@shared/types'
 
 const DD = 'https://ddragon.leagueoflegends.com'
 const stat = (wr: number, n: number, pr?: number) => ({ wr, n, pr })
@@ -154,7 +154,10 @@ async function metaMock(q: MetaQuery, lang: 'tr' | 'en'): Promise<MetaResult> {
 const pick = (championId: number, score: number, tier: string, wr: number, vs: number | null, points: number) => ({ championId, score, tier, wr, delta: +(wr - 50.8).toFixed(2), pr: 6.2, vs, points })
 const rate = (championId: number, tier: string, wr: number, pr: number, br: number, out = false): DraftChamp => ({ championId, tier, wr, pr, br, out })
 const POOL = Array.from({ length: 900 }, (_, i) => i + 1)
+const ban = (championId: number, score: number, reasons: BanPick['reasons'], tier: string, wr: number, br: number, vs: number | null = null): BanPick => ({ championId, score, reasons, tier, wr, br, vs })
 const REC: DraftRecommendation = {
+  banPicks: [ban(11, 78, ['counter', 'strong'], 'S', 52.4, 8.1, 46.2), ban(157, 71, ['strong', 'mine'], 'B', 49.9, 33.5), ban(238, 66, ['mine', 'strong'], 'A+', 51.2, 21.4), ban(64, 60, ['counter'], 'S', 53.1, 2.6, 47.9), ban(121, 52, ['strong'], 'S-', 52.0, 11.2), ban(84, 44, ['mine'], 'B+', 50.9, 9.9), ban(32, 40, ['strong'], 'A', 51.8, 5.1), ban(24, 37, ['counter'], 'A-', 51.3, 3.8, 48.6)],
+  banVsId: 245,
   watch: [rate(103, 'S', 52.9, 9.6, 4.3), rate(238, 'A+', 51.2, 12.1, 21.4), { ...rate(157, '', 0, 0, 0), none: true }],
   popular: [rate(238, 'A+', 51.2, 12.1, 21.4), rate(103, 'S', 52.9, 9.6, 4.3), rate(134, 'A+', 52.6, 8.4, 3.1), rate(112, 'S', 52.2, 7.9, 1.2), rate(7, 'A+', 52.4, 7.1, 6.8), rate(61, 'C-', 50.3, 6.5, 0.6), rate(84, 'B+', 50.9, 6.1, 9.9), rate(69, 'B', 50.5, 5.2, 2.4)],
   myBans: [rate(157, 'B', 49.9, 4.8, 33.5), rate(238, 'A+', 51.2, 12.1, 21.4), rate(84, 'B+', 50.9, 6.1, 9.9, true)],

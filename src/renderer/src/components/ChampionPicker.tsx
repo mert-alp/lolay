@@ -94,6 +94,20 @@ export function ChampionPicker({ st, tier, ban, usable, canSelect, selected, onS
         <span className="ml-auto hidden text-[10.5px] text-mute/80 md:inline">{t(ban ? 'draft.pickerHintBan' : 'draft.pickerHint')}</span>
       </div>
 
+      {ban && selected > 0 && canSelect && st?.champions[selected] && (
+        <div className="flex items-center gap-3 rounded-xl border border-loss/50 bg-loss/[.07] px-3 py-2 shadow-[0_0_22px_-8px_rgba(239,68,68,.7)]">
+          <img src={champIcon(st.version, st.champions[selected].id)} alt="" width={36} height={36} style={{ width: 36, height: 36 }} className="rounded-lg border border-loss/60" />
+          <div className="min-w-0 flex-1 truncate text-[13.5px] font-bold">{st.champions[selected].name}</div>
+          <button
+            onClick={() => onAct()}
+            className="no-drag inline-flex h-9 items-center gap-1.5 rounded-lg bg-gradient-to-b from-[#f0545a] to-[#c02a31] px-4 text-[13px] font-bold text-white shadow-[0_6px_18px_-8px_rgba(239,68,68,.9)] transition-all duration-150 hover:brightness-110 active:scale-[.97]"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" /></svg>
+            {t('draft.banName').replace('{name}', st.champions[selected].name)}
+          </button>
+        </div>
+      )}
+
       {!st ? (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(68px,1fr))] gap-2">{Array.from({ length: 18 }, (_, i) => <div key={i} className="skeleton h-[84px]" />)}</div>
       ) : inLane === undefined && lane !== 'all' ? (

@@ -248,6 +248,31 @@ function EnemyCard({ p, st, tier, role, damage }: { p: LivePlayer; st: StaticDat
   )
 }
 
+// ban phase: the allies as one slim row (enemies are unknown anyway)
+function AllyStrip({ allies, st }: { allies: LivePlayer[]; st: StaticData | null }) {
+  const t = useT()
+  return (
+    <div className="snap-row -mx-3 flex snap-x gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+      {allies.map((p) => {
+        const c = p.championId ? st?.champions[p.championId] : undefined
+        const r = p.summary?.rank
+        const name = p.bot ? c?.name ?? t('live.bot') : p.name ?? (p.hidden ? t('live.hidden') : '…')
+        return (
+          <div key={p.key} className={`flex min-w-[148px] flex-1 snap-start items-center gap-2 rounded-xl border bg-card px-2.5 py-1.5 ${p.me ? 'border-gold/60' : 'border-line'}`}>
+            {c && st ? <img src={champIcon(st.version, c.id)} alt={c.name} title={c.name} className="size-8 shrink-0 rounded-lg ring-1 ring-white/10" /> : <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-dashed border-line text-mute/60">?</span>}
+            <div className="min-w-0 leading-tight">
+              <div className={`truncate text-[12px] font-semibold ${p.me ? 'text-gold' : ''}`}>{name}</div>
+              <div className="truncate text-[10.5px] text-mute" style={{ color: r?.tier ? RANK_TEXT[r.tier] : undefined }}>
+                {r?.tier ? `${t(`rank.${r.tier}` as Key)}${APEX.has(r.tier) ? '' : ` ${r.division}`}` : p.summary ? t('live.unranked') : c?.name ?? t('live.pending')}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function TeamDamage({ dmg, label, hint = true }: { dmg: ReturnType<typeof teamDamage>; label: string; hint?: boolean }) {
   const t = useT()
   const rows: [keyof Damage, Key][] = [['physical', 'draft.ad'], ['magic', 'draft.ap'], ['true', 'draft.true']]
@@ -430,6 +455,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
 
   const phase = cs?.phase ?? 'done'
   const banning = phase === 'ban'
+  const banView = banning || rec?.banActionId != null // my ban is open (even before my turn): the slim ban layout
   const myTurn = phase === 'ban' || phase === 'pick'
   const left = useCountdown(cs?.endsAt ?? null)
   const [banSel, setBanSel] = useState(0)
@@ -487,7 +513,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
     setBanSel(id)
     if (!(await ban(id, false))) setBanSel(0)
   }
-  const choose = (id: number) => (banning ? hoverBan(id) : pick(id))
+  const choose = (id: number) => (banView ? hoverBan(id) : pick(id))
   async function swap(id: number) {
     try {
       if (await window.lolay.draftBenchSwap(id)) return
@@ -617,23 +643,30 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
         </div>
       </Card>
 
-      {/* who plays what: right under the lock button, before the long build */}
-      <div className="snap-row -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 min-[900px]:mx-0 min-[900px]:snap-none min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0">
-        {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} tier={state.tier} />)}
-      </div>
+      {banView ? (
+        <AllyStrip allies={allies.slice(0, 5)} st={st} />
+      ) : (
+        <>
+          {/* who plays what: right under the lock button, before the long build */}
+          <div className="snap-row -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 min-[900px]:mx-0 min-[900px]:snap-none min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0">
+            {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} tier={state.tier} />)}
+          </div>
 
-      <div className="flex flex-wrap gap-2 sm:gap-3">
-        {enemies.slice(0, 5).map((p) => {
-          // as the jungler the suggestion's enemyId is the enemy jungler
-          const role: Key | null = !p.championId ? null : p.championId === rec?.enemyJungleId || (p.championId === rec?.enemyId && myLane === 'jungle') ? 'draft.jungler' : p.championId === rec?.enemyId ? 'draft.laner' : null
-          return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} damage={p.championId ? build(p.championId, p.position)?.damage : null} />
-        })}
-      </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            {enemies.slice(0, 5).map((p) => {
+              // as the jungler the suggestion's enemyId is the enemy jungler
+              const role: Key | null = !p.championId ? null : p.championId === rec?.enemyJungleId || (p.championId === rec?.enemyId && myLane === 'jungle') ? 'draft.jungler' : p.championId === rec?.enemyId ? 'draft.laner' : null
+              return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} damage={p.championId ? build(p.championId, p.position)?.damage : null} />
+            })}
+          </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <TeamDamage dmg={dmg} label={t('draft.teamDamage')} />
-        <TeamDamage dmg={foeDmg} label={t('draft.enemyDamage')} hint={false} />
-      </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <TeamDamage dmg={dmg} label={t('draft.teamDamage')} />
+            <TeamDamage dmg={foeDmg} label={t('draft.enemyDamage')} hint={false} />
+          </div>
+
+        </>
+      )}
 
       <Card className="relative overflow-hidden">
         <div className="relative flex flex-wrap items-center border-b border-line px-2 sm:px-3">
@@ -655,7 +688,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
             aram ? (
               <Bench bench={bench} st={st} onSwap={swap} onReroll={reroll} />
             ) : myLane ? (
-              <Recommendations rec={rec} loading={recLoading} error={recError} st={st} currentId={myId} banning={banning} banSel={banSel} onChoose={choose} />
+              <Recommendations rec={rec} loading={recLoading} error={recError} st={st} currentId={myId} banning={banning} banSel={banSel} onChoose={choose} onBan={(id) => (banning ? act(id) : hoverBan(id))} />
             ) : (
               <p className="py-10 text-center text-[12.5px] text-mute">{t('draft.noLane')}</p>
             )

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { derivePhase, deriveTurn } from '../src/main/champSelect.ts'
 import type { CsSession } from '../src/main/champSelect.ts'
-import { champPool, counterPicks, deriveBan, favorites, favoriteVs, findEnemies, guessLaner, myBanChips, rankBench, rankPicks, rateStrips, recordBans, scorePick } from '../src/main/recommend.ts'
+import { champPool, counterPicks, deriveBan, favorites, favoriteVs, findEnemies, guessLaner, myBanChips, rankBans, rankBench, rankPicks, rateStrips, recordBans, scorePick } from '../src/main/recommend.ts'
 import { createCache, parseMatchups, parseTierList } from '../src/main/tierlist.ts'
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
@@ -237,4 +237,32 @@ test('rankBench: the bench best first, unrated ones last, rerolls when the mode 
   assert.equal(b.bench[2].tier, '')
   assert.equal(b.rerolls, 2)
   assert.equal(rankBench({ ...aram, rerollsRemaining: undefined }, tl).rerolls, null)
+})
+
+test('rankBans: threats, strong lane champions and my history, one score, taken / teammate picks excluded', () => {
+  const none = new Set<number>()
+  const base = rankBans({ list, excluded: none, history: {}, limit: 500 })
+  assert.ok(base.length > 3 && base.every((b) => b.reasons.length > 0))
+  assert.deepEqual(base.map((b) => b.score), base.map((b) => b.score).sort((a, b) => b - a))
+  assert.ok(base.every((b) => b.reasons.every((r) => r === 'strong'))) // no matchups, no history
+
+  // a champion that beats mine (46% for us over enough games) gets the counter reason and jumps up
+  const low = base[base.length - 1]
+  const hit = rankBans({ list, excluded: none, history: {}, vsMine: { [low.championId]: { wr: 46, n: 500 } }, limit: 500 })
+  const row = hit.find((b) => b.championId === low.championId)!
+  assert.equal(row.reasons[0], 'counter')
+  assert.equal(row.vs, 46)
+  assert.ok(row.score > low.score)
+  // too few games = no signal
+  const few = rankBans({ list, excluded: none, history: {}, vsMine: { [low.championId]: { wr: 30, n: 50 } }, limit: 500 })
+  assert.ok(!few.find((b) => b.championId === low.championId)?.reasons.includes('counter'))
+
+  // my ban history adds the mine reason, even for a champion without lane data
+  const h = rankBans({ list, excluded: none, history: { 999999: 3 }, limit: 500 })
+  assert.deepEqual(h.find((b) => b.championId === 999999)!.reasons, ['mine'])
+
+  // taken / teammate hovers / my own champion never show up, history or not
+  const ex = rankBans({ list, excluded: new Set([base[0].championId, base[1].championId]), history: { [base[0].championId]: 5 }, limit: 500 })
+  assert.ok(!ex.some((b) => b.championId === base[0].championId || b.championId === base[1].championId))
+  assert.equal(rankBans({ list, excluded: none, history: {}, limit: 3 }).length, 3)
 })
