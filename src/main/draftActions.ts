@@ -12,6 +12,8 @@ import { updateSettings } from './settings.ts'
 import { getState, setState } from './state.ts'
 import { getMatchups, getTierList, type TierList } from './tierlist.ts'
 
+const MAX_LIST = 18 // suggestions / counters sent; the UI shows 6 and expands to the rest
+
 const FLASH = 4
 const SESSION = '/lol-champ-select/v1/session'
 
@@ -133,10 +135,10 @@ export async function recommend(): Promise<DraftRecommendation | null> {
     favorites: favs,
     favoriteVs: favoriteVs(favs, vsEnemy),
     myBans: myBanChips(getState().settings.banHistory, list, taken, 6),
-    picks: rankPicks({ list, available, mastery: points, vsEnemy, limit: 6 }),
+    picks: rankPicks({ list, available, mastery: points, vsEnemy, limit: MAX_LIST }),
     enemyId: enemyId ?? null,
     enemyJungleId,
-    counters: counterPicks(list, available, vsEnemy, 6),
+    counters: counterPicks(list, available, vsEnemy, MAX_LIST),
     ...rateStrips(list, available, taken, getState().settings.watchlist, 8),
     ...(session ? deriveBan(session) : { banActionId: null, myBanTurn: false })
   }

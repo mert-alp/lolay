@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { champIcon, type DraftChamp, type DraftRecommendation, type StaticData } from '@shared/types'
 import { useLang, useT } from '../i18n'
 import { fmtGames, fmtPct, tierColor, toward, wrColor } from '../util'
@@ -54,6 +54,25 @@ interface TileProps {
   children: ReactNode
 }
 
+const FIRST = 6 // cards before "show more"
+
+// expands a card grid past its first FIRST items
+function More({ n, open, onToggle }: { n: number; open: boolean; onToggle: () => void }) {
+  const t = useT()
+  if (n <= FIRST) return null
+  return (
+    <button
+      onClick={onToggle}
+      className="no-drag group mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-line bg-white/[.02] py-2 text-[12px] font-semibold text-mute transition-colors hover:border-gold/50 hover:bg-gold/[.05] hover:text-gold"
+    >
+      {open ? t('draft.showLess') : t('draft.showMore').replace('{n}', String(n - FIRST))}
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden>
+        <path d="M2 3.5 5 6.5 8 3.5" />
+      </svg>
+    </button>
+  )
+}
+
 function Tile({ src, name, tier, active, dim, danger, title, onClick, children }: TileProps) {
   const col = tier ? tierColor(tier) : ''
   return (
@@ -88,6 +107,8 @@ interface Props {
 
 export function Recommendations({ rec, loading, error, st, currentId, banning, banSel, onChoose }: Props) {
   const t = useT()
+  const [allCounters, setAllCounters] = useState(false)
+  const [allPicks, setAllPicks] = useState(false)
   const lang = useLang()
   const sel = banning ? banSel : currentId
   const icon = (id: number) => {
@@ -128,7 +149,7 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 md:grid-cols-3">
-        {counters.map((c, i) => {
+        {counters.slice(0, allCounters ? undefined : FIRST).map((c, i) => {
           const ic = icon(c.championId)
           if (!ic) return null
           return (
@@ -155,6 +176,7 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
           )
         })}
       </div>
+      <More n={counters.length} open={allCounters} onToggle={() => setAllCounters((v) => !v)} />
     </section>
   )
 
@@ -221,7 +243,7 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
           <p className="py-8 text-center text-[12.5px] text-mute">{t('draft.recNone')}</p>
         ) : (
           <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 md:grid-cols-3">
-            {(rec?.picks ?? Array.from({ length: 6 }, () => null)).map((p, i) => {
+            {(rec?.picks.slice(0, allPicks ? undefined : FIRST) ?? Array.from({ length: FIRST }, () => null)).map((p, i) => {
               const ic = p && icon(p.championId)
               if (!p || !ic) return <div key={i} className="skeleton h-[88px]" />
               const col = tierColor(p.tier)
@@ -256,6 +278,7 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
             })}
           </div>
         )}
+        {rec && <More n={rec.picks.length} open={allPicks} onToggle={() => setAllPicks((v) => !v)} />}
         <p className="mt-2 text-[10.5px] text-mute/80">{t('draft.scoreTip')}</p>
       </section>
     </div>
