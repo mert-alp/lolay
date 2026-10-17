@@ -222,7 +222,8 @@ function EnemyCard({ p, st, tier, role, damage }: { p: LivePlayer; st: StaticDat
   const c = p.championId ? st?.champions[p.championId] : undefined
   const meta = useChampMeta(p.championId, p.position, tier, !!c)
   return (
-    <div className={`fade-up flex min-w-[150px] flex-1 basis-[150px] flex-col gap-1.5 rounded-xl border bg-card px-2.5 py-2 ${role ? 'border-loss/45' : 'border-line'}`}>
+    <div className={`fade-up relative flex min-w-[150px] flex-1 basis-[150px] flex-col gap-1.5 rounded-xl border bg-card px-2.5 py-2 ${role ? 'border-loss/45' : 'border-line'}`}>
+      {role && <Chip className="absolute -top-2 right-2 border-loss/40 bg-[#1a1216] text-loss">{t(role)}</Chip>}
       <div className="flex items-center gap-2.5">
         {c && st ? (
           <div className="relative shrink-0">
@@ -235,12 +236,11 @@ function EnemyCard({ p, st, tier, role, damage }: { p: LivePlayer; st: StaticDat
         <div className="min-w-0 flex-1 leading-tight">
           <div className={`truncate text-[12.5px] font-semibold ${c ? '' : 'text-mute'}`}>{c?.name ?? '—'}</div>
           <div className="truncate text-[10.5px] text-mute">
-            {!c ? t('live.opponent') : meta === undefined ? <Sk w="60%" h={9} /> : meta ? (
-              <><span className={`font-semibold ${wrColor(meta.wr)}`}>{meta.wr.toFixed(1)}%</span> · {p.position ? t(`lane.${p.position}` as Key) : t('live.opponent')}</>
-            ) : t('live.opponent')}
+            {!c ? t('live.pending') : meta === undefined ? <Sk w="60%" h={9} /> : meta ? (
+              <><span className={`font-semibold ${wrColor(meta.wr)}`}>{meta.wr.toFixed(1)}%</span> {t('power.wr')}{p.position && <> · {t(`lane.${p.position}` as Key)}</>}</>
+            ) : '–'}
           </div>
         </div>
-        {role && <Chip className="shrink-0 border-loss/40 bg-loss/10 text-loss">{t(role)}</Chip>}
       </div>
       {c && <div className="h-[17px]"><DamageChips d={damage} /></div>}
     </div>
@@ -530,7 +530,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
         )}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-gold/70 via-gold/20 to-transparent" />
 
-        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2.5 px-3 pt-3 sm:gap-x-4 sm:px-4 sm:pt-3.5">
+        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2.5 p-3 sm:gap-x-4 sm:p-4 sm:py-3.5">
           {shown && st ? (
             <img src={champIcon(st.version, shown.id)} alt={shown.name} style={{ width: 48, height: 48 }} className={`rounded-xl border ${banning ? 'border-loss/60 shadow-[0_0_22px_-6px_rgba(239,68,68,.6)]' : 'border-gold/50 shadow-[0_0_22px_-6px_rgba(200,170,110,.6)]'}`} />
           ) : (
@@ -554,9 +554,11 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
               onClick={() => act()}
               disabled={!canAct}
               className={`no-drag inline-flex h-10 w-full items-center justify-center sm:w-auto sm:min-w-[150px] gap-2 rounded-lg px-5 text-[13.5px] font-bold transition-all duration-150 active:scale-[.97] ${
-                canAct
-                  ? 'bg-gradient-to-b from-[#f0545a] to-[#c02a31] text-white shadow-[0_8px_24px_-8px_rgba(239,68,68,.9)] hover:brightness-110'
-                  : 'border border-line bg-[#1a2030] text-mute'
+                !canAct
+                  ? 'border border-line bg-[#1a2030] text-mute'
+                  : banning
+                    ? 'bg-gradient-to-b from-[#f0545a] to-[#c02a31] text-white shadow-[0_8px_24px_-8px_rgba(239,68,68,.9)] hover:brightness-110'
+                    : 'bg-gradient-to-b from-[#e8c77e] to-[#b48a3e] text-[#1a1408] shadow-[0_8px_24px_-8px_rgba(200,170,110,.9)] hover:brightness-110'
               }`}
             >
               {banning ? (
@@ -580,8 +582,28 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
             </div>
           )}
         </div>
+      </Card>
 
-        <div className="relative mt-2 flex flex-wrap items-center border-b border-line px-2 sm:px-3">
+      {/* who plays what: right under the lock button, before the long build */}
+      <div className="snap-row -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 min-[900px]:mx-0 min-[900px]:snap-none min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0">
+        {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} tier={state.tier} />)}
+      </div>
+
+      <div className="flex flex-wrap gap-2 sm:gap-3">
+        {enemies.slice(0, 5).map((p) => {
+          // as the jungler the suggestion's enemyId is the enemy jungler
+          const role: Key | null = !p.championId ? null : p.championId === rec?.enemyJungleId || (p.championId === rec?.enemyId && myLane === 'jungle') ? 'draft.jungler' : p.championId === rec?.enemyId ? 'draft.laner' : null
+          return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} damage={p.championId ? build(p.championId, p.position)?.damage : null} />
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <TeamDamage dmg={dmg} label={t('draft.teamDamage')} />
+        <TeamDamage dmg={foeDmg} label={t('draft.enemyDamage')} hint={false} />
+      </div>
+
+      <Card className="relative overflow-hidden">
+        <div className="relative flex flex-wrap items-center border-b border-line px-2 sm:px-3">
           <div className="flex gap-1 max-sm:w-full max-sm:border-b max-sm:border-line/60">
             {tabBtn('recs', t('draft.tabRecs'))}
             {tabBtn('all', t('draft.tabAll'))}
@@ -627,23 +649,6 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
           )}
         </div>
       </Card>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <TeamDamage dmg={dmg} label={t('draft.teamDamage')} />
-        <TeamDamage dmg={foeDmg} label={t('draft.enemyDamage')} hint={false} />
-      </div>
-
-      <div className="snap-row -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 min-[900px]:mx-0 min-[900px]:snap-none min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0">
-        {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} tier={state.tier} />)}
-      </div>
-
-      <div className="flex flex-wrap gap-2 sm:gap-3">
-        {enemies.slice(0, 5).map((p) => {
-          // as the jungler the suggestion's enemyId is the enemy jungler
-          const role: Key | null = !p.championId ? null : p.championId === rec?.enemyJungleId || (p.championId === rec?.enemyId && myLane === 'jungle') ? 'draft.jungler' : p.championId === rec?.enemyId ? 'draft.laner' : null
-          return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} damage={p.championId ? build(p.championId, p.position)?.damage : null} />
-        })}
-      </div>
 
       {hasBans && (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1">
