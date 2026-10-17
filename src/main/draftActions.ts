@@ -9,6 +9,7 @@ import { champPathSlug, slugFromDdragonId } from './lolalytics.ts'
 import { champPool, counterPicks, deriveBan, favoriteVs, favorites, findEnemies, myBanChips, rankBench, rankPicks, rateStrips } from './recommend.ts'
 import { getStatic } from './services.ts'
 import { updateSettings } from './settings.ts'
+import { itemAdvice } from './itemAdvice.ts'
 import { getState, setState } from './state.ts'
 import { getAramList, getMatchups, getTierList, type TierList } from './tierlist.ts'
 
@@ -166,4 +167,5 @@ export function registerDraftIpc() {
   ipcMain.handle(IPC.draftBench, () => bench())
   ipcMain.handle(IPC.draftBenchSwap, (_e, championId: number) => benchSwap(championId))
   ipcMain.handle(IPC.draftReroll, () => reroll())
+  ipcMain.handle(IPC.draftItemAdvice, (_e, championId: number, lane: Lane) => itemAdvice(championId, lane))
 }

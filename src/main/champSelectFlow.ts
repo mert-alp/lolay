@@ -26,6 +26,9 @@ let seenBans = new Set<number>() // my ban action ids already counted
 let watch: SpellWatch = { seen: null, ours: null }
 let turnKey: number | null = null // my action whose turn was last alerted
 let endsAt: number | null = null // read when the session arrives: refresh() also runs later
+let foeKey = '' // enemy champions known so far
+let reimport: NodeJS.Timeout | null = null
+const REIMPORT_WAIT = 1500 // let the live roster catch up and several picks land together
 
 // ARAM builds and their own spell / rune preferences ('aram' takes the lane's place in the key)
 const queueOf = () => (mapId === HOWLING_ABYSS ? ('aram' as const) : undefined)
@@ -43,6 +46,11 @@ export function onChampSelect(data: CsSession | null, eventType = 'Update') {
   turnKey = turn.key
   if (turn.fire && getSettings().turnAlert) alertTurn()
   trackSpells(data)
+  const foes = (data.theirTeam ?? []).map((p) => p.championId).filter((id) => id > 0).sort().join()
+  if (foes !== foeKey) {
+    foeKey = foes
+    scheduleItemReimport()
+  }
   const banHistory = recordBans(data, seenBans, getSettings().banHistory)
   if (banHistory) setState({ settings: updateSettings({ banHistory }) })
   refresh()
@@ -54,6 +62,9 @@ export function resetChampSelect(keepBans = false) {
   appliedKey = importedKey = failedKey = importingKey = result = null
   prefetchKey = ''
   turnKey = endsAt = null
+  foeKey = ''
+  if (reimport) clearTimeout(reimport)
+  reimport = null
   if (!keepBans) seenBans = new Set()
   watch = { seen: null, ours: null }
   setState({ champSelect: null })
@@ -88,6 +99,21 @@ function refresh() {
   })
   if (sel.championId) prefetch(sel, key)
   if (doApply) void autoApply(sel, key)
+}
+
+// The item set has blocks against the enemy team: after my import, write it again when another enemy is picked.
+// Items only: runes and spells may have been changed by hand in the client since.
+function scheduleItemReimport() {
+  if (reimport) clearTimeout(reimport)
+  reimport = setTimeout(() => {
+    reimport = null
+    if (!session || queueOf() || !getSettings().autoImport.items) return
+    const sel = deriveSelection(session, { appliedKey })
+    if (importedKey !== selectionKey(sel.championId, sel.lane)) return // not imported yet: the import itself sees the enemies
+    getBuild({ championId: sel.championId, lane: sel.lane ?? undefined })
+      .then((b) => (b.insufficient ? null : applyBuild({ championId: sel.championId, lane: b.lane, items: true })))
+      .catch((e) => console.error('item re-import', e))
+  }, REIMPORT_WAIT)
 }
 
 // The pair the client shows is the user's truth: where Flash sits is remembered, and a pair we did not write is the

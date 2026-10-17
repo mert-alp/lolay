@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import type { ApplyRequest, ApplyResult, Build, ItemStat, Lang } from '../shared/types.ts'
+import { buildPath, type ItemAdvice } from '../shared/itemRules.ts'
+import { toward } from '../shared/text.ts'
+import type { ApplyRequest, ApplyResult, Build, Lang } from '../shared/types.ts'
+import { itemAdvice } from './itemAdvice.ts'
 import { orderSpells } from '../shared/prefs.ts'
 import { request } from './lcu.ts'
 import { ddragon, getBuild, getStatic } from './services.ts'
@@ -8,8 +11,8 @@ import { getState } from './state.ts'
 
 const PREFIX = 'Lolay'
 const BLOCKS: Record<Lang, string[]> = {
-  tr: ['Başlangıç', 'Çekirdek Eşyalar', 'Botlar', '4. Eşya', '5. Eşya', '6. Eşya'], // same names as the Champion page
-  en: ['Starting', 'Core Build', 'Boots', '4th Item', '5th Item', '6th Item']
+  tr: ['Başlangıç', 'Popüler Build', 'Seçenekler', 'Rakip Takıma Karşı', '{name} Karşı'], // same names as the build panel
+  en: ['Starting', 'Popular Build', 'Options', 'Vs Enemy Team', 'Vs {name}']
 }
 
 const ok = (status: number) => status >= 200 && status < 300
@@ -63,17 +66,17 @@ const block = (type: string, ids: number[]) => {
   return { type, items: [...counts].map(([id, count]) => ({ id: String(id), count })) }
 }
 
-async function applyItems(build: Build, title: string, lang: Lang): Promise<'skipped' | void> {
-  const top = (items: ItemStat[], n: number) => items.slice(0, n).map((i) => i.id)
+async function applyItems(build: Build, title: string, lang: Lang, advice: ItemAdvice | null): Promise<'skipped' | void> {
   const t = BLOCKS[lang]
+  const { path, boots, options } = buildPath(build)
+  const vsName = advice?.vs && (await getStatic()).champions[advice.vs.championId]?.name
   const blocks = [
     block(t[0], build.startItems[0]?.ids ?? []),
-    block(t[1], build.core?.ids ?? []),
-    block(t[2], top(build.boots, 2)),
-    block(t[3], top(build.item4, 3)),
-    block(t[4], top(build.item5, 3)),
-    block(t[5], top(build.item6, 3))
-  ].filter((b) => b.items.length)
+    block(t[1], [...path.slice(0, 1), ...boots, ...path.slice(1)]), // boots usually come after the first item
+    block(t[2], options),
+    block(t[3], [...new Set(advice?.rows.flatMap((r) => r.items.map((i) => i.id)) ?? [])]),
+    block(vsName ? t[4].replace('{name}', toward(lang, vsName)) : '', advice?.vs?.items.map((i) => i.id) ?? [])
+  ].filter((b) => b.type && b.items.length)
   if (!blocks.length) return 'skipped' // keep the previous Lolay set instead of replacing it with an empty one
   const { summonerId } = (await call('GET', '/lol-summoner/v1/current-summoner')) as { summonerId: number }
   const url = `/lol-item-sets/v1/item-sets/${summonerId}/sets`
@@ -124,7 +127,8 @@ export async function applyBuild(req: ApplyRequest): Promise<ApplyResult> {
     const load = async () => (build ??= await getBuild({ championId: req.championId, lane: req.lane, queue: req.queue }))
     if (req.perks || req.runeIndex !== undefined) await part('runes', async () => applyRunes(req.perks ?? (await load()).runes[req.runeIndex!]?.perks, title))
     if (req.spells) await part('spells', async () => applySpells(req.spellIds ?? (await load()).spells[0]?.ids))
-    if (req.items) await part('items', async () => applyItems(await load(), title, getState().lang))
+    // the enemy team so far: champ select re-imports the items whenever another enemy is picked
+    if (req.items) await part('items', async () => applyItems(await load(), title, getState().lang, req.queue ? null : await itemAdvice(req.championId, req.lane).catch(() => null)))
   } catch (e) {
     console.error('apply', e)
     out.error = errorCode(e)

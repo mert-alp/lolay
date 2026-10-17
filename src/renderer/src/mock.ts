@@ -241,6 +241,20 @@ export function installMock() {
     draftLock: async () => true,
     draftBan: async () => true,
     queueNames: async () => ({}),
+    draftItemAdvice: async () => {
+      await new Promise((r) => setTimeout(r, 500))
+      const it = (id: number, wr: number, n: number) => ({ id, wr, n })
+      return {
+        enemies: 4,
+        comp: { pct: { physical: 27, magic: 64, true: 9 }, cc: { avg: 2.3, high: [254] }, healers: [11] },
+        rows: [
+          { kind: 'mr' as const, items: [it(3102, 53.1, 8200), it(3111, 51.9, 6100), it(4401, 52.4, 1200)] },
+          { kind: 'tenacity' as const, items: [it(3111, 51.9, 6100), it(3140, 50.2, 400)] },
+          { kind: 'antiheal' as const, items: [it(3165, 52.8, 3100), it(3916, 51.0, 900)] }
+        ],
+        vs: { championId: 254, items: [it(3157, 55.2, 2100), it(3102, 54.0, 640)] }
+      }
+    },
     draftBench: async () => {
       if (!location.hash.includes('champselect-aram')) return null
       const rate = (id: number) => ({ championId: id, tier: ['S', 'A+', 'A', 'B+', 'B', 'C'][id % 6], wr: +(48 + (id % 9) * 0.7).toFixed(1) })

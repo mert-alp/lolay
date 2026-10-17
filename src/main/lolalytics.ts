@@ -117,6 +117,8 @@ export function toBuild(d: any, tier: Tier): Build {
     counters: counters(d, lane),
     damage: h.damage ? { physical: Number(h.damage.physical) || 0, magic: Number(h.damage.magic) || 0, true: Number(h.damage.true) || 0 } : null,
     timeWr: timeWr(d.sidebar?.time),
+    items: ((d.item ?? []) as any[]).map((r) => ({ id: r[0], wr: r[1], n: r[3] })), // [id, wr, pr, n, ...]
+    heal: Number(((d.sidebar?.stats?.stats ?? []) as any[]).find((s) => s[0] === 'heal')?.[2]) || undefined,
     partial: !core || !pick.skillorder?.id,
     fetchedAt: Date.now()
   }
@@ -175,9 +177,27 @@ function toPartialBuild(j: any, q: { championId: number; slug: string; lane?: La
 
 const get = (url: string) => httpGet(url, { gap: 1000 })
 
-export async function fetchMatchupPages(q: { slug: string; vsSlug: string; lane: Lane; vsLane: Lane; tier: Tier }): Promise<RunePage[]> {
-  const html = await (await get(`${BASE}/${q.slug}/vs/${q.vsSlug}/build/?${query({ lane: q.lane, vslane: q.vsLane, tier: q.tier })}`)).text()
-  return matchupPages(parseQwik(html).data)
+type VsQuery = { slug: string; vsSlug: string; lane: Lane; vsLane: Lane; tier: Tier }
+
+// one download of a /vs/ page serves both its rune pages and its items; kept for the session (a few per draft)
+const vsPages = new Map<string, Promise<any>>()
+function vsData(q: VsQuery): Promise<any> {
+  const url = `${BASE}/${q.slug}/vs/${q.vsSlug}/build/?${query({ lane: q.lane, vslane: q.vsLane, tier: q.tier })}`
+  let p = vsPages.get(url)
+  if (!p) {
+    vsPages.set(url, (p = get(url).then((r) => r.text()).then((html) => parseQwik(html).data)))
+    p.catch(() => vsPages.delete(url))
+  }
+  return p
+}
+
+export async function fetchMatchupPages(q: VsQuery): Promise<RunePage[]> {
+  return matchupPages(await vsData(q))
+}
+
+// the most bought items against one enemy, [id, wr, pr, n, ...] rows on the page
+export async function fetchMatchupItems(q: VsQuery): Promise<ItemStat[]> {
+  return (((await vsData(q))?.popularItem ?? []) as any[]).map((r) => ({ id: r[0], wr: r[1], n: r[3] }))
 }
 
 // network trouble or a server error; anything else will not get better through the JSON API

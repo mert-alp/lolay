@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   champIcon, BUILD_TTL, DDRAGON, LANES,
   type AppState, type ApplyRequest, type Build, type Lane, type Matchup, type StaticData
 } from '@shared/types'
-import { useT, type Key } from '../i18n'
+import { useT } from '../i18n'
 import { SOURCE_NAME, fmtGames, fmtPct, tierColor as tierColorOf, wrColor } from '../util'
 import { Button, Card, Eyebrow, Segmented } from '../components/ui'
 import { prefKey } from '@shared/prefs'
 import { RuneSection, saveRunePref } from '../components/RunePageCard'
-import { Arrow, ItemIcon, ItemSetRow } from '../components/ItemIcon'
+import { BuildItems } from '../components/BuildItems'
 import { SkillOrder } from '../components/SkillOrder'
 import { SpellControl } from '../components/SpellPicker'
 import { ImportRow } from '../components/ImportRow'
@@ -258,44 +258,7 @@ export function Champion({ state, st, champId, followLane, onPick, onHome, toast
             </Card>
           </div>
 
-          <Card className="p-4">
-            <Eyebrow right={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined}>
-              {t('items.title')}
-            </Eyebrow>
-            <div className="flex flex-wrap gap-x-8 gap-y-5">
-              <Group label={t('items.start')}>
-                <div className="flex gap-4">
-                  {fresh.startItems.slice(0, 2).map((s) => <ItemSetRow key={s.ids.join()} ids={s.ids} st={st} wr={s.wr} n={s.n} />)}
-                </div>
-              </Group>
-              {fresh.core && (
-                <Group label={t('items.core')}>
-                  <div className="flex items-start gap-2">
-                    {fresh.core.ids.map((id, i) => (
-                      <div key={id} className="flex items-start gap-2">
-                        {i > 0 && <Arrow />}
-                        <ItemIcon id={id} st={st} size={44} wr={i === 0 ? fresh.core!.wr : undefined} n={i === 0 ? fresh.core!.n : undefined} />
-                      </div>
-                    ))}
-                  </div>
-                </Group>
-              )}
-              <Group label={t('items.boots')}>
-                <div className="flex gap-3">
-                  {fresh.boots.slice(0, 3).map((b) => <ItemIcon key={b.id} id={b.id} st={st} size={40} wr={b.wr} n={b.n} />)}
-                </div>
-              </Group>
-            </div>
-            <div className="mt-5 grid gap-x-8 gap-y-5 border-t border-line pt-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))]">
-              {([['items.item4', fresh.item4], ['items.item5', fresh.item5], ['items.item6', fresh.item6]] as [Key, typeof fresh.item4][]).map(([k, list]) => (
-                <Group key={k} label={t(k)}>
-                  <div className="flex gap-3">
-                    {list.slice(0, 3).map((b) => <ItemIcon key={b.id} id={b.id} st={st} size={40} wr={b.wr} n={b.n} />)}
-                  </div>
-                </Group>
-              ))}
-            </div>
-          </Card>
+          <BuildItems build={fresh} st={st} action={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined} />
 
           <Card className="p-4">
             <Eyebrow>{t('counters.title')}</Eyebrow>
@@ -315,15 +278,6 @@ function Stat({ label, value, cls = '', big }: { label: string; value: string; c
     <div className="text-right">
       <div className={`font-bold leading-none ${big ? 'text-[26px]' : 'text-[20px]'} ${cls}`}>{value}</div>
       <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-mute">{label}</div>
-    </div>
-  )
-}
-
-function Group({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-mute">{label}</div>
-      {children}
     </div>
   )
 }

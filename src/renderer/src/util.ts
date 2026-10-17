@@ -6,14 +6,7 @@ export function fmtGames(n: number): string {
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`
   return String(n)
 }
-// "Vi'ye", "Ekko'ya", "Zed'e": Turkish dative of a champion name by its last written vowel; other languages keep the name
-export function toward(lang: Lang, name: string): string {
-  if (lang !== 'tr') return name
-  const last = name.toLowerCase().replace(/[^a-zçğıöşüâîû]/g, '')
-  const v = [...last].reverse().find((c) => 'aeıioöuüâîû'.includes(c)) ?? 'e'
-  const buffer = 'aeıioöuüâîû'.includes(last.at(-1) ?? '') ? 'y' : ''
-  return `${name}'${buffer}${'aıouâû'.includes(v) ? 'a' : 'e'}`
-}
+export { toward } from '@shared/text'
 export const fmtPct = (n: number | null | undefined) => (n == null ? '–' : `${n.toFixed(1)}%`)
 export const wrColor = (wr: number | null | undefined) => (wr == null ? 'text-fg' : wr > 50.05 ? 'text-win' : wr < 49.95 ? 'text-loss' : 'text-fg')
 

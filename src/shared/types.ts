@@ -1,4 +1,5 @@
 // Contract shared by main, preload and renderer. Keep it plain data (structured-clone safe).
+import type { ItemAdvice } from './itemRules.ts'
 
 export type Lane = 'top' | 'jungle' | 'middle' | 'bottom' | 'support'
 export const LANES: Lane[] = ['top', 'jungle', 'middle', 'bottom', 'support']
@@ -82,6 +83,8 @@ export interface Build {
   partial: boolean // true when key sections are missing (provider fallback or incomplete page)
   damage?: Damage | null // Lolalytics only: average damage split of the champion, absolute numbers
   queue?: 'aram' // an ARAM build: `lane` means nothing then
+  items?: ItemStat[] // Lolalytics only: every item this champion builds, for item advice
+  heal?: number // Lolalytics only: average healing per game
   timeWr?: (number | null)[] // Lolalytics only: win rate per game length, TIME_BUCKETS minutes; null = no games
   insufficient?: true // the source has too little data for this champion/lane/rank; every list is empty
   fetchedAt: number
@@ -115,6 +118,8 @@ export interface StaticItem {
   name: string
   gold: number
   boots?: true // ddragon tag "Boots"
+  final?: true // builds into nothing and is no consumable / trinket: a finished item
+  def?: ('SpellBlock' | 'Armor' | 'Tenacity')[] // the ddragon tags item advice looks at
   desc: string // ddragon description (restricted HTML, see shared/richText.ts); plaintext when empty
 }
 export interface StaticRune {
@@ -516,6 +521,7 @@ export interface LolayApi {
   draftBench(): Promise<DraftBench | null> // null = not in an ARAM champ select
   draftBenchSwap(championId: number): Promise<boolean>
   draftReroll(): Promise<boolean>
+  draftItemAdvice(championId: number, lane: Lane): Promise<ItemAdvice | null> // null = not in a Rift champ select
   queueNames(): Promise<Record<number, string>> // the client's own queue names, {} without the client
 }
 
@@ -546,5 +552,6 @@ export const IPC = {
   queueNames: 'queues:names',
   draftBench: 'draft:bench',
   draftBenchSwap: 'draft:benchSwap',
-  draftReroll: 'draft:reroll'
+  draftReroll: 'draft:reroll',
+  draftItemAdvice: 'draft:itemAdvice'
 } as const

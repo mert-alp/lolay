@@ -154,3 +154,9 @@ test('timeWr: win rate per game length bucket, null without games', () => {
   assert.equal(wr.length, 7)
   assert.ok(wr.every((v) => v != null && v > 30 && v < 70))
 })
+
+test('toBuild keeps the champion item list and average healing for item advice', () => {
+  const b = toBuild(parsed.data, 'emerald_plus')
+  assert.ok(b.items!.length > 50 && b.items!.every((i) => i.id > 0 && i.n >= 0))
+  assert.ok(b.heal! > 1000)
+})

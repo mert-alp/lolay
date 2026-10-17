@@ -35,7 +35,8 @@ const api: LolayApi = {
   queueNames: () => ipcRenderer.invoke(IPC.queueNames),
   draftBench: () => ipcRenderer.invoke(IPC.draftBench),
   draftBenchSwap: (id) => ipcRenderer.invoke(IPC.draftBenchSwap, id),
-  draftReroll: () => ipcRenderer.invoke(IPC.draftReroll)
+  draftReroll: () => ipcRenderer.invoke(IPC.draftReroll),
+  draftItemAdvice: (id, lane) => ipcRenderer.invoke(IPC.draftItemAdvice, id, lane)
 }
 
 contextBridge.exposeInMainWorld('lolay', api)

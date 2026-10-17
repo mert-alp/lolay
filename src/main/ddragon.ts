@@ -6,7 +6,7 @@ import type { Lang, StaticData, StaticRune } from '../shared/types.ts'
 const CDN = 'https://ddragon.leagueoflegends.com'
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global'
 const LOCALE: Record<Lang, string> = { tr: 'tr_TR', en: 'en_US' }
-const REV = 4 // bump when StaticData changes shape: older cache files are refetched
+const REV = 5 // bump when StaticData changes shape: older cache files are refetched
 const CDRAGON_LOCALE: Record<Lang, string> = { tr: 'tr_tr', en: 'default' }
 
 async function json(url: string): Promise<any> {
@@ -24,7 +24,16 @@ async function fetchStatic(v: string, lang: Lang): Promise<StaticData> {
 
   const data: StaticData = { version: v, lang, champions: {}, items: {}, runes: {}, trees: [], spells: {} }
   for (const c of Object.values<any>(champ.data)) data.champions[Number(c.key)] = { key: Number(c.key), id: c.id, name: c.name }
-  for (const [id, i] of Object.entries<any>(item.data)) data.items[Number(id)] = { name: i.name, gold: i.gold.total, desc: i.description || i.plaintext || '', ...(i.tags?.includes('Boots') && { boots: true as const }) }
+  for (const [id, i] of Object.entries<any>(item.data)) {
+    const tags: string[] = i.tags ?? []
+    const def = (['SpellBlock', 'Armor', 'Tenacity'] as const).filter((x) => tags.includes(x))
+    data.items[Number(id)] = {
+      name: i.name, gold: i.gold.total, desc: i.description || i.plaintext || '',
+      ...(tags.includes('Boots') && { boots: true as const }),
+      ...(!i.into?.length && !tags.includes('Consumable') && !tags.includes('Trinket') && { final: true as const }),
+      ...(def.length && { def })
+    }
+  }
   for (const s of Object.values<any>(summ.data)) data.spells[Number(s.key)] = { key: Number(s.key), id: s.id, name: s.name, desc: s.description ?? '', cd: String(s.cooldownBurn ?? '') }
 
   const img = (icon: string) => `${CDN}/cdn/img/${icon}`

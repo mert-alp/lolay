@@ -1,9 +1,10 @@
-import { useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { champIcon, TIME_BUCKETS, type ApplyRequest, type Build, type ChampSelectState, type Matchup, type Settings, type StaticData } from '@shared/types'
-import { useT, type Key } from '../i18n'
+import { useT } from '../i18n'
 import { fmtGames, fmtPct, wrColor } from '../util'
 import { Button, Card, Eyebrow } from './ui'
-import { Arrow, ItemIcon, ItemSetRow } from './ItemIcon'
+import { BuildItems } from './BuildItems'
+import type { ItemAdvice } from '@shared/itemRules'
 import { prefKey } from '@shared/prefs'
 import { RuneSection, saveRunePref } from './RunePageCard'
 import { SkillOrder } from './SkillOrder'
@@ -11,15 +12,6 @@ import { SpellControl } from './SpellPicker'
 import type { PushToast } from './Toasts'
 
 export type ApplyFn = (req: Omit<ApplyRequest, 'championId' | 'lane'>, kind: 'runes' | 'spells' | 'items') => void
-
-function Group({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-mute">{label}</div>
-      {children}
-    </div>
-  )
-}
 
 function Matchups({ title, list, st, enemyId }: { title: string; list: Matchup[]; st: StaticData; enemyId: number | null }) {
   return (
@@ -83,13 +75,28 @@ interface Props {
   vsLaner?: number // enemy champion in my lane / the enemy jungler, for the matchup rune pages
   vsJungler?: number
   enemyVs: number | null // our win rate against the likely enemy laner
+  foes: string // enemy champions known so far: the item advice is asked again when it changes
   onApply: ApplyFn
   toast: PushToast
 }
 
 // the full build of the hovered/locked champion, inline in the draft
-export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungler, enemyVs, onApply, toast }: Props) {
+// what to buy against the enemy team / laner; null while it loads (the old answer stays until the new one is in)
+function useItemAdvice(championId: number, lane: Build['lane'], foes: string, on: boolean) {
+  const [advice, setAdvice] = useState<{ key: string; v: ItemAdvice | null } | null>(null)
+  const key = `${championId}:${lane}`
+  useEffect(() => {
+    if (!on) return
+    let live = true
+    window.lolay.draftItemAdvice(championId, lane).then((v) => live && setAdvice({ key, v })).catch(() => {})
+    return () => { live = false }
+  }, [key, foes, on])
+  return advice?.key === key ? advice.v : null
+}
+
+export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungler, enemyVs, foes, onApply, toast }: Props) {
   const t = useT()
+  const advice = useItemAdvice(build.championId, build.lane, foes, !build.queue)
   const enemy = enemyId ? st.champions[enemyId] : undefined
   // changes in champ select go straight to the client, but only while the hovered/locked champion is the one shown
   const live = useRef(cs)
@@ -135,38 +142,12 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
         </Card>
       </div>
 
-      <Card className="p-4">
-        <Eyebrow right={<Button variant="ghost" className="!px-3 !py-1 !text-[12px]" onClick={() => onApply({ items: true }, 'items')}>{t('items.import')}</Button>}>
-          {t('items.title')}
-        </Eyebrow>
-        <div className="flex flex-wrap gap-x-8 gap-y-4">
-          <Group label={t('items.start')}>
-            <div className="flex gap-3">{build.startItems.slice(0, 2).map((s) => <ItemSetRow key={s.ids.join()} ids={s.ids} st={st} wr={s.wr} n={s.n} size={34} />)}</div>
-          </Group>
-          {build.core && (
-            <Group label={t('items.core')}>
-              <div className="flex items-start gap-2">
-                {build.core.ids.map((id, i) => (
-                  <div key={id} className="flex items-start gap-2">
-                    {i > 0 && <Arrow />}
-                    <ItemIcon id={id} st={st} size={42} wr={i === 0 ? build.core!.wr : undefined} n={i === 0 ? build.core!.n : undefined} />
-                  </div>
-                ))}
-              </div>
-            </Group>
-          )}
-          <Group label={t('items.boots')}>
-            <div className="flex gap-2.5">{build.boots.slice(0, 3).map((b) => <ItemIcon key={b.id} id={b.id} st={st} size={36} wr={b.wr} n={b.n} />)}</div>
-          </Group>
-        </div>
-        <div className="mt-4 grid gap-x-6 gap-y-4 border-t border-line pt-3.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))]">
-          {([['items.item4', build.item4], ['items.item5', build.item5], ['items.item6', build.item6]] as [Key, typeof build.item4][]).map(([k, list]) => (
-            <Group key={k} label={t(k)}>
-              <div className="flex gap-2.5">{list.slice(0, 3).map((b) => <ItemIcon key={b.id} id={b.id} st={st} size={36} wr={b.wr} n={b.n} />)}</div>
-            </Group>
-          ))}
-        </div>
-      </Card>
+      <BuildItems
+        build={build}
+        st={st}
+        advice={build.queue ? undefined : advice}
+        action={<Button variant="ghost" className="!px-3 !py-1 !text-[12px]" onClick={() => onApply({ items: true }, 'items')}>{t('items.import')}</Button>}
+      />
 
       {build.timeWr && <PowerCurve wr={build.timeWr} />}
 

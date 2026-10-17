@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { champIcon, DDRAGON, spellIcon, type AppState, type DraftBench, type MetaResult, type MetaRow, type Tier, type ApplyRequest, type Build, type Damage, type DraftPool, type DraftRecommendation, type LivePlayer, type StaticData } from '@shared/types'
 import { damagePct, teamDamage } from '@shared/damage'
+import { ONE_SIDED } from '@shared/itemRules'
 import { useT, type Key } from '../i18n'
 import { RANK_TEXT, fmtGames, tagsOf, tierColor, wrColor } from '../util'
 import { Card } from '../components/ui'
@@ -14,7 +15,6 @@ import type { PushToast } from '../components/Toasts'
 
 const APEX = new Set(['MASTER', 'GRANDMASTER', 'CHALLENGER'])
 const DMG = { physical: '#ef5350', magic: '#4aa3ff', true: '#aab2c5' } as const
-const ONE_SIDED = 70
 
 const bkey = (id: number, lane?: string | null) => `${id}:${lane ?? ''}`
 
@@ -675,7 +675,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
           ) : mine?.insufficient ? (
             <p className="py-10 text-center text-[13px] font-semibold">{t('err.insufficient')}</p>
           ) : mineOk && st && cs ? (
-            <BuildPanel build={mineOk} st={st} cs={cs} settings={state.settings} enemyId={enemyId} vsLaner={vsLaner} vsJungler={vsJungler} enemyVs={enemyVs} onApply={apply} toast={toast} />
+            <BuildPanel build={mineOk} st={st} cs={cs} settings={state.settings} enemyId={enemyId} vsLaner={vsLaner} vsJungler={vsJungler} enemyVs={enemyVs} foes={enemies.map((p) => p.championId).filter((id) => id > 0).sort().join()} onApply={apply} toast={toast} />
           ) : (
             <div className="space-y-3" aria-busy>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="skeleton h-[250px]" /><div className="skeleton h-[250px]" /></div>
