@@ -55,175 +55,13 @@ function useChampMeta(championId: number, lane: LivePlayer['position'], tier: Ti
   return row
 }
 
-function Silhouette() {
-  return (
-    <svg viewBox="0 0 100 120" className="absolute inset-x-0 top-6 mx-auto w-[58%] text-[#1d2330]" fill="currentColor" aria-hidden>
-      <circle cx="50" cy="38" r="22" />
-      <path d="M8 118c0-28 18-44 42-44s42 16 42 44z" />
-    </svg>
-  )
-}
-
-function DamageChips({ d }: { d: Damage | null | undefined }) {
-  const t = useT()
-  const p = damagePct(d)
-  if (!p) return null
-  const rows: [keyof Damage, string, Key][] = [['physical', 'AD', 'draft.ad'], ['magic', 'AP', 'draft.ap'], ['true', 'T', 'draft.true']]
-  return (
-    <div className="flex gap-1">
-      {rows.map(([k, short, long]) => (
-        <span key={k} title={t(long)} className="inline-flex h-[17px] items-center gap-1 rounded-md bg-black/35 px-1.5 text-[10px] font-bold leading-none" style={{ color: DMG[k] }}>
-          {short}
-          <span className="font-semibold text-fg/90">{Math.round(p[k])}</span>
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-2 text-[11.5px] leading-[16px]">
-      <span className="shrink-0 text-[10.5px] text-mute">{label}</span>
-      <span className="truncate text-right font-medium">{children}</span>
-    </div>
-  )
-}
-
-function AllyCard({ p, st, build, tier: appTier }: { p: LivePlayer; st: StaticData | null; build: Build | null; tier: Tier }) {
-  const t = useT()
-  const champ = p.championId ? st?.champions[p.championId] : undefined
-  const cd = !!p.hidden && !p.bot && !!champ
-  const meta = useChampMeta(p.championId, p.position, appTier, cd)
-  const s = p.summary
-  const loading = !!p.puuid && !s
-  const tier = s?.rank?.tier
-  const games = s ? s.wins + s.losses : 0
-  const wr = games ? Math.round((s!.wins / games) * 100) : null
-  const cwr = s && s.champ.games ? Math.round((s.champ.wins / s.champ.games) * 100) : null
-  const name = p.bot ? champ?.name ?? t('live.bot') : p.name ?? (p.puuid ? '…' : t('live.hidden'))
-  const tags = tagsOf(p)
-  const streak = s?.streak ?? 0
-
-  return (
-    <article
-      className={`fade-up relative h-[262px] w-[160px] shrink-0 snap-start overflow-hidden rounded-xl border bg-[#12161d] min-[900px]:w-auto min-[900px]:min-w-0 min-[900px]:flex-1 min-[900px]:basis-0 ${
-        p.me ? 'border-gold/70 shadow-[0_0_0_1px_rgba(200,170,110,.3),0_12px_34px_-14px_rgba(200,170,110,.55)]' : 'border-line'
-      }`}
-    >
-      {champ ? (
-        <img src={`${DDRAGON}/img/champion/loading/${champ.id}_0.jpg`} alt={champ.name} decoding="async" className="absolute inset-0 size-full object-cover object-top" />
-      ) : (
-        <Silhouette />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e14] via-[#0b0e14]/90 via-[48%] to-[#0b0e14]/5" />
-      {p.me && <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />}
-
-      <div className="relative flex h-full flex-col p-2.5">
-        <div className="flex items-start justify-between gap-1">
-          {p.position ? (
-            <Chip className="border-white/15 bg-black/45 text-fg/90 backdrop-blur-sm">{t(`lane.${p.position}` as Key)}</Chip>
-          ) : <span />}
-          <div className="flex flex-col items-end gap-1">
-            {tags.map((g) => <Chip key={g} className={`bg-black/50 backdrop-blur-sm ${TAG_STYLE[g]}`}>{t(`live.tag.${g}` as Key)}</Chip>)}
-            {streak !== 0 && (
-              <Chip className={`bg-black/50 backdrop-blur-sm ${streak > 0 ? 'border-win/40 text-win' : 'border-loss/40 text-loss'}`}>
-                {Math.abs(streak)}{t(streak > 0 ? 'live.w' : 'live.l')}
-              </Chip>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-auto space-y-2">
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-1.5">
-              <span className={`truncate text-[15px] font-bold leading-tight ${p.me ? 'text-gold' : p.bot || !p.name ? 'text-fg/80' : ''}`}>{name}</span>
-              {p.tag && <span className="shrink-0 text-[10.5px] text-mute">#{p.tag}</span>}
-            </div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-mute">
-              {p.bot && <Chip className="border-white/15 bg-white/[.06] text-mute">{t('live.bot')}</Chip>}
-              {p.me && <Chip className="border-gold/40 bg-gold/10 text-gold">{t('live.me')}</Chip>}
-              {!p.bot && <span className="truncate">{champ?.name ?? t('live.pending')}</span>}
-            </div>
-          </div>
-
-          {loading && (
-            <div className="space-y-2 border-t border-white/10 pt-2">
-              <Sk w="70%" h={12} /><Sk w="50%" h={10} /><Sk w="90%" h={10} /><Sk w="80%" h={10} /><Sk w="60%" h={10} />
-            </div>
-          )}
-
-          {s && (
-            <div className="space-y-1 border-t border-white/10 pt-2">
-              <div className="leading-tight">
-                <div className="text-[13px] font-bold" style={{ color: tier ? RANK_TEXT[tier] : undefined }}>
-                  {tier ? (
-                    <>
-                      {t(`rank.${tier}` as Key)}
-                      {!APEX.has(tier) && ` ${s.rank!.division}`}
-                      <span className="ml-1.5 text-[11px] font-medium text-mute">{s.rank!.lp} {t('live.lp')}</span>
-                    </>
-                  ) : (
-                    <span className="font-semibold text-mute">{t('live.unranked')}</span>
-                  )}
-                </div>
-                <div className="mt-0.5 text-[11px]">
-                  {wr == null ? <span className="text-mute">–</span> : (
-                    <>
-                      <span className={wr >= 60 ? 'font-semibold text-gold' : `font-semibold ${wrColor(wr)}`}>{wr}%</span>
-                      <span className="text-mute"> · {s.wins}{t('live.w')} {s.losses}{t('live.l')}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <Row label={t('draft.mastery')}>
-                {s.mastery ? <><span className="font-bold text-gold">M{s.mastery.level}</span><span className="text-mute"> · {fmtGames(s.mastery.points)}</span></> : <span className="text-mute">–</span>}
-              </Row>
-              <Row label={t('live.champ')}>
-                {cwr == null ? <span className="text-mute">0 {t('live.games')}</span> : <><span className={wrColor(cwr)}>{cwr}%</span><span className="text-mute"> · {s.champ.games} {t('live.games')}</span></>}
-              </Row>
-              <Row label="KDA">
-                {s.kda == null ? <span className="text-mute">–</span> : <span className={`font-bold ${kdaColor(s.kda)}`}>{s.kda.toFixed(2)}</span>}
-              </Row>
-            </div>
-          )}
-
-          {cd && (
-            <div className="space-y-1 border-t border-white/10 pt-2">
-              <div className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.champData')}</div>
-              {meta === undefined ? (
-                <div className="space-y-2 pt-0.5"><Sk w="70%" h={12} /><Sk w="90%" h={10} /><Sk w="80%" h={10} /></div>
-              ) : meta === null ? (
-                <span className="text-[11.5px] text-mute">–</span>
-              ) : (
-                <>
-                  <div className="flex items-center gap-1.5 leading-tight">
-                    {meta.tier && <span className="rounded-md border px-1.5 text-[11px] font-extrabold" style={{ color: tierColor(meta.tier), borderColor: tierColor(meta.tier) + '77', background: tierColor(meta.tier) + '1f' }}>{meta.tier}</span>}
-                    <span className={`text-[15px] font-bold ${wrColor(meta.wr)}`}>{meta.wr.toFixed(1)}%</span>
-                    <span className={`text-[10.5px] font-semibold ${meta.delta >= 0 ? 'text-win' : 'text-loss'}`}>{meta.delta >= 0 ? '+' : ''}{meta.delta.toFixed(1)}</span>
-                  </div>
-                  <Row label={t('draft.laneRank')}>{meta.rank ? `#${meta.rank}` : <span className="text-mute">–</span>}</Row>
-                  <Row label={t('draft.pickBan')}>{meta.pr.toFixed(1)}% <span className="text-mute">·</span> {meta.br.toFixed(1)}%</Row>
-                </>
-              )}
-            </div>
-          )}
-
-          {p.bot && <div className="border-t border-white/10 pt-2 text-[11px] text-mute">{t('draft.botNote')}</div>}
-          <div className="h-[17px]">{!p.bot && <DamageChips d={build?.damage} />}</div>
-        </div>
-      </div>
-    </article>
-  )
-}
-
 // enemy champion with its own lane stats (ranked hides who plays it); the likely laner / jungler is marked
-function EnemyCard({ p, st, tier, role, damage }: { p: LivePlayer; st: StaticData | null; tier: Tier; role: Key | null; damage: Damage | null | undefined }) {
+function EnemyCard({ p, st, tier, role }: { p: LivePlayer; st: StaticData | null; tier: Tier; role: Key | null }) {
   const t = useT()
   const c = p.championId ? st?.champions[p.championId] : undefined
   const meta = useChampMeta(p.championId, p.position, tier, !!c)
   return (
-    <div className={`fade-up relative flex min-w-[150px] flex-1 basis-[150px] flex-col gap-1.5 rounded-xl border bg-card px-2.5 py-2 ${role ? 'border-loss/45' : 'border-line'}`}>
+    <div className={`fade-up relative flex min-w-[150px] flex-1 basis-[150px] flex-col rounded-xl border bg-card px-2.5 py-2 ${role ? 'border-loss/45' : 'border-line'}`}>
       {role && <Chip className="absolute -top-2 right-2 border-loss/40 bg-[#1a1216] text-loss">{t(role)}</Chip>}
       <div className="flex items-center gap-2.5">
         {c && st ? (
@@ -243,70 +81,85 @@ function EnemyCard({ p, st, tier, role, damage }: { p: LivePlayer; st: StaticDat
           </div>
         </div>
       </div>
-      {c && <div className="h-[17px]"><DamageChips d={damage} /></div>}
     </div>
   )
 }
 
-// ban phase: the allies as one slim row (enemies are unknown anyway)
-function AllyStrip({ allies, st }: { allies: LivePlayer[]; st: StaticData | null }) {
+// one ally, compact: champion, name, rank and season win rate; a hidden ranked player gets the champion's own lane numbers
+function AllyChip({ p, st, tier }: { p: LivePlayer; st: StaticData | null; tier: Tier }) {
   const t = useT()
+  const c = p.championId ? st?.champions[p.championId] : undefined
+  const meta = useChampMeta(p.championId, p.position, tier, !!p.hidden && !p.bot && !!c)
+  const s = p.summary
+  const r = s?.rank
+  const games = s ? s.wins + s.losses : 0
+  const wr = games ? Math.round((s!.wins / games) * 100) : null
+  const name = p.bot ? c?.name ?? t('live.bot') : p.name ?? (p.hidden ? t('live.hidden') : '…')
+  const tag = tagsOf(p)[0]
+  return (
+    <div className={`fade-up flex min-w-[150px] flex-1 basis-0 snap-start items-center gap-2.5 rounded-xl border bg-card px-2.5 py-2 ${p.me ? 'border-gold/60 bg-gold/[.05]' : 'border-line'}`}>
+      <div className="relative shrink-0">
+        {c && st ? <img src={champIcon(st.version, c.id)} alt={c.name} title={c.name} className="size-10 rounded-lg ring-1 ring-white/10" /> : <span className="grid size-10 place-items-center rounded-lg border border-dashed border-line text-mute/60">?</span>}
+        {p.position && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border border-line bg-[#0b0e14] px-1 text-[9px] leading-[12px] font-semibold text-mute">{t(`lane.${p.position}` as Key)}</span>}
+      </div>
+      <div className="min-w-0 flex-1 leading-tight">
+        <div className="flex min-w-0 items-center gap-1">
+          <span className={`truncate text-[12.5px] font-semibold ${p.me ? 'text-gold' : p.hidden || p.bot ? 'text-fg/80' : ''}`}>{name}</span>
+          {tag && <Chip className={`shrink-0 ${TAG_STYLE[tag]}`}>{t(`live.tag.${tag}` as Key)}</Chip>}
+        </div>
+        <div className="mt-0.5 truncate text-[11px]">
+          {s ? (
+            <>
+              <span className="font-semibold" style={{ color: r?.tier ? RANK_TEXT[r.tier] : undefined }}>
+                {r?.tier ? `${t(`rank.${r.tier}` as Key)}${APEX.has(r.tier) ? '' : ` ${r.division}`}` : t('live.unranked')}
+              </span>
+              {wr != null && <span className={`ml-1.5 font-semibold ${wrColor(wr)}`}>{wr}%</span>}
+            </>
+          ) : p.hidden && c ? (
+            meta ? (
+              <>
+                {meta.tier && <span className="mr-1 font-extrabold" style={{ color: tierColor(meta.tier) }}>{meta.tier}</span>}
+                <span className={wrColor(meta.wr)}>{meta.wr.toFixed(1)}%</span> <span className="text-mute">{t('live.champ')}</span>
+              </>
+            ) : <span className="text-mute">{c.name}</span>
+          ) : p.puuid ? <Sk w={70} h={9} /> : <span className="text-mute">{c?.name ?? t('live.pending')}</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AllyStrip({ allies, st, tier }: { allies: LivePlayer[]; st: StaticData | null; tier: Tier }) {
   return (
     <div className="snap-row -mx-3 flex snap-x gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0">
-      {allies.map((p) => {
-        const c = p.championId ? st?.champions[p.championId] : undefined
-        const r = p.summary?.rank
-        const name = p.bot ? c?.name ?? t('live.bot') : p.name ?? (p.hidden ? t('live.hidden') : '…')
-        return (
-          <div key={p.key} className={`flex min-w-[148px] flex-1 snap-start items-center gap-2 rounded-xl border bg-card px-2.5 py-1.5 ${p.me ? 'border-gold/60' : 'border-line'}`}>
-            {c && st ? <img src={champIcon(st.version, c.id)} alt={c.name} title={c.name} className="size-8 shrink-0 rounded-lg ring-1 ring-white/10" /> : <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-dashed border-line text-mute/60">?</span>}
-            <div className="min-w-0 leading-tight">
-              <div className={`truncate text-[12px] font-semibold ${p.me ? 'text-gold' : ''}`}>{name}</div>
-              <div className="truncate text-[10.5px] text-mute" style={{ color: r?.tier ? RANK_TEXT[r.tier] : undefined }}>
-                {r?.tier ? `${t(`rank.${r.tier}` as Key)}${APEX.has(r.tier) ? '' : ` ${r.division}`}` : p.summary ? t('live.unranked') : c?.name ?? t('live.pending')}
-              </div>
-            </div>
-          </div>
-        )
-      })}
+      {allies.map((p) => <AllyChip key={p.key} p={p} st={st} tier={tier} />)}
     </div>
   )
 }
 
-function TeamDamage({ dmg, label, hint = true }: { dmg: ReturnType<typeof teamDamage>; label: string; hint?: boolean }) {
+// both teams' damage split on one slim card; the AD / AP heavy hint for my team
+function DamageBars({ mine, foe }: { mine: ReturnType<typeof teamDamage>; foe: ReturnType<typeof teamDamage> }) {
   const t = useT()
   const rows: [keyof Damage, Key][] = [['physical', 'draft.ad'], ['magic', 'draft.ap'], ['true', 'draft.true']]
-  const heavy = dmg && hint ? rows.find(([k]) => k !== 'true' && dmg.pct[k] >= ONE_SIDED) : undefined
-  return (
-    <Card className="flex min-h-[64px] flex-col justify-center gap-2 px-3.5 py-2.5 sm:px-4">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mute">{label}</span>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      {dmg ? (
+  const heavy = mine ? rows.find(([k]) => k !== 'true' && mine.pct[k] >= ONE_SIDED) : undefined
+  const bar = (label: string, d: ReturnType<typeof teamDamage>) => (
+    <div className="flex min-w-0 flex-1 basis-[260px] items-center gap-2.5">
+      <span className="w-[72px] shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-mute">{label}</span>
+      {d ? (
         <>
-          <div className="flex h-2.5 min-w-[140px] flex-1 basis-[140px] overflow-hidden rounded-full bg-[#10131a] ring-1 ring-white/5">
-            {rows.map(([k]) => (
-              <span key={k} className="h-full transition-[width] duration-500" style={{ width: `${dmg.pct[k]}%`, background: DMG[k] }} />
-            ))}
+          <div className="flex h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-[#10131a] ring-1 ring-white/5">
+            {rows.map(([k]) => <span key={k} className="h-full transition-[width] duration-500" style={{ width: `${d.pct[k]}%`, background: DMG[k] }} />)}
           </div>
-          <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 text-[12px] font-bold">
-            {rows.map(([k, label]) => (
-              <span key={k} className="inline-flex items-center gap-1.5" style={{ color: DMG[k] }}>
-                <span className="size-2 rounded-full" style={{ background: DMG[k] }} />
-                <span className="text-[10.5px] font-medium text-mute">{t(label)}</span>
-                {Math.round(dmg.pct[k])}%
-              </span>
-            ))}
-          </div>
-          {heavy && (
-            <span className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[11px] text-yellow-300">
-              {t(heavy[0] === 'physical' ? 'draft.hintAd' : 'draft.hintAp')}
-            </span>
-          )}
+          <span className="shrink-0 text-[11px] font-bold"><span style={{ color: DMG.physical }}>AD {Math.round(d.pct.physical)}</span> <span style={{ color: DMG.magic }}>AP {Math.round(d.pct.magic)}</span></span>
         </>
-      ) : (
-        <span className="text-[12px] text-mute">{t('draft.noDamage')}</span>
-      )}
-      </div>
+      ) : <span className="text-[11px] text-mute">–</span>}
+    </div>
+  )
+  return (
+    <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 px-3.5 py-2">
+      {bar(t('draft.teamShort'), mine)}
+      {bar(t('draft.enemyShort'), foe)}
+      {heavy && <span className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[11px] text-yellow-300">{t(heavy[0] === 'physical' ? 'draft.hintAd' : 'draft.hintAp')}</span>}
     </Card>
   )
 }
@@ -644,26 +497,21 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
       </Card>
 
       {banView ? (
-        <AllyStrip allies={allies.slice(0, 5)} st={st} />
+        <AllyStrip allies={allies.slice(0, 5)} st={st} tier={state.tier} />
       ) : (
         <>
-          {/* who plays what: right under the lock button, before the long build */}
-          <div className="snap-row -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 min-[900px]:mx-0 min-[900px]:snap-none min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0">
-            {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} tier={state.tier} />)}
-          </div>
+          {/* who plays what: right under the lock button, compact so the suggestions stay on screen */}
+          <AllyStrip allies={allies.slice(0, 5)} st={st} tier={state.tier} />
 
           <div className="flex flex-wrap gap-2 sm:gap-3">
             {enemies.slice(0, 5).map((p) => {
               // as the jungler the suggestion's enemyId is the enemy jungler
               const role: Key | null = !p.championId ? null : p.championId === rec?.enemyJungleId || (p.championId === rec?.enemyId && myLane === 'jungle') ? 'draft.jungler' : p.championId === rec?.enemyId ? 'draft.laner' : null
-              return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} damage={p.championId ? build(p.championId, p.position)?.damage : null} />
+              return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} />
             })}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <TeamDamage dmg={dmg} label={t('draft.teamDamage')} />
-            <TeamDamage dmg={foeDmg} label={t('draft.enemyDamage')} hint={false} />
-          </div>
+          <DamageBars mine={dmg} foe={foeDmg} />
 
         </>
       )}

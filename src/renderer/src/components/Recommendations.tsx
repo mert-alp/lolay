@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { champIcon, type DraftChamp, type DraftRecommendation, type StaticData } from '@shared/types'
+import { champIcon, type DraftRecommendation, type StaticData } from '@shared/types'
 import { useLang, useT, type Key } from '../i18n'
 import { fmtGames, fmtPct, tierColor, toward, wrColor } from '../util'
 
@@ -23,37 +23,6 @@ function ScoreRing({ score, size = 46 }: { score: number; size?: number }) {
 
 const sectionTitle = 'text-[11px] font-semibold uppercase tracking-[0.14em] text-mute'
 
-// a horizontal strip of champion tiles: scroll-snap on narrow screens, wraps from sm up
-function Strip({ title, right, items, empty, tile }: { title: string; right?: ReactNode; items: DraftChamp[] | undefined; empty?: string; tile: (c: DraftChamp) => ReactNode }) {
-  return (
-    <section>
-      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <h3 className={sectionTitle}>{title}</h3>
-        {right}
-      </div>
-      {items && items.length === 0 ? (
-        <p className="text-[12px] text-mute">{empty}</p>
-      ) : (
-        <div className="snap-row -mx-3 flex snap-x scroll-px-3 gap-2 overflow-x-auto px-3 pb-1.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-          {items ? items.map(tile) : Array.from({ length: 8 }, (_, i) => <div key={i} className="skeleton h-[100px] w-[78px] shrink-0 !rounded-xl" />)}
-        </div>
-      )}
-    </section>
-  )
-}
-
-interface TileProps {
-  src: string
-  name: string
-  tier?: string
-  active?: boolean
-  dim?: boolean
-  danger?: boolean // ban strip: highlight in red
-  title?: string
-  onClick?: () => void
-  children: ReactNode
-}
-
 const FIRST = 6 // cards before "show more"
 
 // expands a card grid past its first FIRST items
@@ -69,27 +38,6 @@ function More({ n, open, onToggle }: { n: number; open: boolean; onToggle: () =>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden>
         <path d="M2 3.5 5 6.5 8 3.5" />
       </svg>
-    </button>
-  )
-}
-
-function Tile({ src, name, tier, active, dim, danger, title, onClick, children }: TileProps) {
-  const col = tier ? tierColor(tier) : ''
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      title={title ?? name}
-      className={`no-drag fade-up flex h-[100px] w-[78px] shrink-0 snap-start flex-col items-center rounded-xl border bg-[#12161d] px-1 pt-1.5 text-center transition-all duration-150 enabled:hover:-translate-y-px ${
-        active ? (danger ? 'border-loss shadow-[0_0_14px_-4px_rgba(239,68,68,.8)]' : 'border-gold shadow-[0_0_14px_-4px_rgba(200,170,110,.7)]') : 'border-line'
-      } ${onClick ? (danger ? 'hover:border-loss/60' : 'hover:border-gold/60') : 'cursor-default'} ${dim ? 'opacity-60' : ''}`}
-    >
-      <div className="relative shrink-0">
-        <img src={src} alt="" draggable={false} className={`size-10 rounded-lg border border-white/10 ${dim ? 'grayscale' : ''}`} />
-        {tier && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold" style={{ color: col, borderColor: col + '77' }}>{tier}</span>}
-      </div>
-      <div className="mt-2.5 w-full truncate text-[11px] leading-tight font-semibold">{name}</div>
-      <div className="w-full truncate text-[10px] leading-tight text-mute">{children}</div>
     </button>
   )
 }
@@ -111,6 +59,7 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
   const [allCounters, setAllCounters] = useState(false)
   const [allPicks, setAllPicks] = useState(false)
   const [allBans, setAllBans] = useState(false)
+  const [view, setView] = useState<'recs' | 'counter'>('counter') // counters first once the laner is known
   const lang = useLang()
   const sel = banning ? banSel : currentId
   const icon = (id: number) => {
@@ -119,86 +68,32 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
   }
   const enemy = rec?.enemyId ? icon(rec.enemyId) : null
 
-  const tile = (kind: 'watch' | 'popular') => (c: DraftChamp) => {
-    const ic = icon(c.championId)
-    if (!ic) return null
-    const rate = (label: string, v: number) => <><span className="text-[#6b7589]">{label}</span> {fmtPct(v)}</>
-    return (
-      <Tile key={c.championId} src={ic.src} name={ic.c.name} tier={c.none ? undefined : c.tier} dim={c.none} active={c.championId === sel} danger={banning} title={c.none ? `${ic.c.name} · ${t('draft.noLaneData')}` : ic.c.name} onClick={() => onChoose(c.championId)}>
-        {c.none ? <span className="whitespace-normal text-[9px] leading-[11px]">{t('draft.noLaneData')}</span> : kind === 'watch' ? <span className={wrColor(c.wr)}>{fmtPct(c.wr)}</span> : <>{rate('PR', c.pr)}<br /><span className={wrColor(c.wr)}>{fmtPct(c.wr)}</span></>}
-      </Tile>
-    )
-  }
   const counters = rec?.counters ?? []
-  const counterSection = enemy && counters.length > 0 && (
-    <section className="rounded-2xl border border-gold/30 bg-gradient-to-b from-gold/[.06] to-transparent p-3 sm:p-4">
-      <div className="mb-3 flex items-center gap-3">
-        <img src={enemy.src} alt="" draggable={false} className="size-10 shrink-0 rounded-xl border border-gold/50" />
-        <div className="min-w-0 leading-tight">
-          <h3 className="truncate text-[14px] font-bold text-gold">{t('draft.counterTitle').replace('{name}', toward(lang, enemy.c.name))}</h3>
-          <p className="truncate text-[11px] text-mute">{t('draft.counterSub')}</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 md:grid-cols-3">
-        {counters.slice(0, allCounters ? undefined : FIRST).map((c, i) => {
-          const ic = icon(c.championId)
-          if (!ic) return null
-          return (
-            <button
-              key={c.championId}
-              onClick={() => onChoose(c.championId)}
-              title={ic.c.name}
-              className={`fade-up no-drag flex min-w-0 items-center gap-3 rounded-xl border bg-[#12161d] px-3 py-2.5 text-left transition-all duration-150 hover:-translate-y-px hover:border-gold/60 hover:bg-[#171c26] ${
-                c.championId === sel ? (banning ? 'border-loss shadow-[0_0_0_1px_rgba(239,68,68,.35)]' : 'border-gold shadow-[0_0_0_1px_rgba(200,170,110,.35)]') : i === 0 ? 'border-gold/40' : 'border-line'
-              }`}
-            >
-              <div className="relative shrink-0">
-                <img src={ic.src} alt="" draggable={false} className="size-12 rounded-xl border border-white/10" />
-                {c.tier && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold" style={{ color: tierColor(c.tier), borderColor: tierColor(c.tier) + '77' }}>{c.tier}</span>}
-              </div>
-              <div className="min-w-0 flex-1 leading-tight">
-                <div className="truncate text-[13.5px] font-bold">{ic.c.name}</div>
-                <div className={`text-[18px] font-extrabold ${wrColor(c.vs)}`}>{fmtPct(c.vs)}</div>
-                <div className="truncate text-[10.5px] text-mute">
-                  {t('draft.counterLine').replace('{name}', toward(lang, enemy.c.name)).replace('{wr}', fmtPct(c.vs)).replace('{n}', fmtGames(c.n))}
-                </div>
-              </div>
-            </button>
-          )
-        })}
-      </div>
-      <More n={counters.length} open={allCounters} onToggle={() => setAllCounters((v) => !v)} />
-    </section>
-  )
 
   const banMode = banning || rec?.banActionId != null // ban phase: only ban material, no picks yet
+  // my most played in this lane, then my watchlist (★); a click hovers it
+  const watch = (rec?.watch ?? []).filter((w) => !rec?.favorites.includes(w.championId)).map((w) => w.championId)
   const favSection = (
-      <section>
-        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.myChamps')}</h3>
-        <div className="flex min-h-11 flex-wrap items-center gap-2">
-          {rec ? rec.favorites.map((id) => {
-            const ic = icon(id)
-            const vs = rec.favoriteVs?.[id]
-            return ic && (
-              <button
-                key={id}
-                onClick={() => onChoose(id)}
-                title={vs != null && enemy ? `${ic.c.name} · ${t('draft.favVs').replace('{name}', enemy.c.name).replace('{wr}', fmtPct(vs))}` : ic.c.name}
-                className={`no-drag relative size-11 rounded-xl border transition-all duration-150 hover:scale-105 hover:border-gold/70 ${id === sel ? 'border-gold shadow-[0_0_14px_-2px_rgba(200,170,110,.7)]' : 'border-line'}`}
-              >
-                <img src={ic.src} alt={ic.c.name} draggable={false} className="size-full rounded-[11px] object-cover" />
-                {vs != null && <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border border-line bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold ${wrColor(vs)}`}>{fmtPct(vs)}</span>}
-              </button>
-            )
-          }) : Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton size-11 !rounded-xl" />)}
-        </div>
-      </section>
-  )
-  const strips = (
-    <>
-      <Strip title={t('draft.watch')} items={rec?.watch} empty={t('draft.watchHint')} tile={tile('watch')} />
-      <Strip title={t('draft.popular')} items={rec?.popular} tile={tile('popular')} />
-    </>
+    <div className="flex min-h-11 flex-wrap items-center gap-2">
+      <h3 className="mr-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.myChamps')}</h3>
+      {rec ? [...rec.favorites, ...watch].map((id) => {
+        const ic = icon(id)
+        const vs = rec.favoriteVs?.[id]
+        const starred = watch.includes(id)
+        return ic && (
+          <button
+            key={id}
+            onClick={() => onChoose(id)}
+            title={vs != null && enemy ? `${ic.c.name} · ${t('draft.favVs').replace('{name}', enemy.c.name).replace('{wr}', fmtPct(vs))}` : ic.c.name}
+            className={`no-drag relative size-10 rounded-xl border transition-all duration-150 hover:scale-105 hover:border-gold/70 ${id === sel ? 'border-gold shadow-[0_0_14px_-2px_rgba(200,170,110,.7)]' : 'border-line'}`}
+          >
+            <img src={ic.src} alt={ic.c.name} draggable={false} className="size-full rounded-[11px] object-cover" />
+            {starred && <span className="absolute -top-1.5 -right-1.5 text-[11px] leading-none text-gold drop-shadow">★</span>}
+            {vs != null && <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border border-line bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold ${wrColor(vs)}`}>{fmtPct(vs)}</span>}
+          </button>
+        )
+      }) : Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton size-10 !rounded-xl" />)}
+    </div>
   )
 
   if (banMode) {
@@ -264,19 +159,57 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
     )
   }
 
-  return (
-    <div className="space-y-4">
-      {favSection}
-      {counterSection}
-      {strips}
+  const counterOn = !!enemy && counters.length > 0 && view === 'counter'
+  const seg = (id: 'recs' | 'counter', label: string) => (
+    <button
+      key={id}
+      onClick={() => setView(id)}
+      className={`no-drag h-7 rounded-md px-3 text-[12px] font-semibold transition-colors ${view === id ? 'bg-gold/15 text-gold' : 'text-mute hover:text-fg'}`}
+    >
+      {label}
+    </button>
+  )
+  const card = (id: number, i: number, body: ReactNode, right?: ReactNode, tier?: string) => {
+    const ic = icon(id)
+    if (!ic) return null
+    const col = tier ? tierColor(tier) : ''
+    return (
+      <button
+        key={id}
+        onClick={() => onChoose(id)}
+        title={ic.c.name}
+        className={`fade-up no-drag group relative flex h-[68px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border bg-[#12161d] px-3 text-left transition-all duration-150 hover:-translate-y-px hover:border-gold/60 hover:bg-[#171c26] ${
+          id === sel ? 'border-gold shadow-[0_0_0_1px_rgba(200,170,110,.35)]' : i === 0 ? 'border-gold/40' : 'border-line'
+        }`}
+      >
+        {i === 0 && <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />}
+        <div className="relative shrink-0">
+          <img src={ic.src} alt="" draggable={false} className="size-11 rounded-xl border border-white/10" />
+          {tier && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold" style={{ color: col, borderColor: col + '77' }}>{tier}</span>}
+        </div>
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="truncate text-[13.5px] font-bold">{ic.c.name}</div>
+          {body}
+        </div>
+        {right}
+      </button>
+    )
+  }
+  const list = counterOn ? counters : rec?.picks ?? []
+  const all = counterOn ? allCounters : allPicks
 
+  return (
+    <div className="space-y-3">
+      {favSection}
       <section>
-        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.recs')}</h3>
-          {enemy && (
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-white/[.03] py-0.5 pr-2 pl-0.5 text-[11px] text-mute" title={t('draft.vsEnemy')}>
-              <img src={enemy.src} alt="" className="size-5 rounded" />
-              {t('draft.vsEnemy')}: <span className="font-semibold text-fg">{enemy.c.name}</span>
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <div className="flex items-center gap-1 rounded-lg border border-line bg-white/[.02] p-0.5">
+            {seg('recs', t('draft.recsShort'))}
+            {enemy && counters.length > 0 && seg('counter', t('draft.vsShort').replace('{name}', toward(lang, enemy.c.name)))}
+          </div>
+          {enemy && !counterOn && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-mute" title={t('draft.vsEnemy')}>
+              <img src={enemy.src} alt="" className="size-5 rounded" />{t('draft.vsEnemy')}: <span className="font-semibold text-fg">{enemy.c.name}</span>
             </span>
           )}
           {loading && rec && <span className="size-3 animate-spin rounded-full border-2 border-blue/30 border-t-blue" />}
@@ -284,47 +217,28 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
 
         {error && !rec ? (
           <p className="py-8 text-center text-[12.5px] text-mute">{t('draft.recErr')}</p>
-        ) : rec && rec.picks.length === 0 ? (
+        ) : rec && list.length === 0 ? (
           <p className="py-8 text-center text-[12.5px] text-mute">{t('draft.recNone')}</p>
+        ) : !rec ? (
+          <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 md:grid-cols-3">{Array.from({ length: FIRST }, (_, i) => <div key={i} className="skeleton h-[68px]" />)}</div>
         ) : (
-          <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 md:grid-cols-3">
-            {(rec?.picks.slice(0, allPicks ? undefined : FIRST) ?? Array.from({ length: FIRST }, () => null)).map((p, i) => {
-              const ic = p && icon(p.championId)
-              if (!p || !ic) return <div key={i} className="skeleton h-[88px]" />
-              const col = tierColor(p.tier)
-              const top = i === 0
-              return (
-                <button
-                  key={p.championId}
-                  onClick={() => onChoose(p.championId)}
-                  title={t('draft.scoreTip')}
-                  className={`fade-up no-drag group relative flex h-[88px] items-center gap-3 overflow-hidden rounded-xl border bg-[#12161d] px-3 text-left transition-all duration-150 hover:-translate-y-px hover:border-gold/60 hover:bg-[#171c26] ${
-                    p.championId === sel ? (banning ? 'border-loss shadow-[0_0_0_1px_rgba(239,68,68,.35)]' : 'border-gold shadow-[0_0_0_1px_rgba(200,170,110,.35)]') : top ? 'border-gold/40' : 'border-line'
-                  }`}
-                >
-                  {top && <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />}
-                  <div className="relative shrink-0">
-                    <img src={ic.src} alt="" draggable={false} className="size-[52px] rounded-xl border border-white/10" />
-                    <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-md border bg-[#0b0e14] px-1.5 text-[10px] leading-[15px] font-extrabold" style={{ color: col, borderColor: col + '77' }}>{p.tier}</span>
-                  </div>
-                  <div className="min-w-0 flex-1 leading-tight">
-                    <div className="truncate text-[14px] font-bold">{ic.c.name}</div>
-                    <div className={`text-[11px] font-semibold ${top ? 'text-gold' : 'text-mute'}`}>#{i + 1} {t('draft.suggest')}</div>
-                    <div className="mt-0.5 truncate text-[10.5px] text-mute">
+          <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 md:grid-cols-3">
+            {counterOn
+              ? counters.slice(0, all ? undefined : FIRST).map((c, i) =>
+                  card(c.championId, i, (
+                    <div className="truncate text-[11px] text-mute"><span className={`text-[14px] font-extrabold ${wrColor(c.vs)}`}>{fmtPct(c.vs)}</span> · {fmtGames(c.n)} {t('live.games')}</div>
+                  ), undefined, c.tier))
+              : rec.picks.slice(0, all ? undefined : FIRST).map((p, i) =>
+                  card(p.championId, i, (
+                    <div className="truncate text-[10.5px] text-mute">
                       <span className={wrColor(p.wr)}>{fmtPct(p.wr)}</span>
                       {p.vs != null && <> · <span className={wrColor(p.vs)}>vs {fmtPct(p.vs)}</span></>}
                       {p.points > 0 && <> · M {fmtGames(p.points)}</>}
                     </div>
-                    <div className="mt-0.5 text-[10px] text-mute/70 transition-colors group-hover:text-gold">{t('draft.clickHint')}</div>
-                  </div>
-                  <ScoreRing score={p.score} />
-                </button>
-              )
-            })}
+                  ), <span title={t('draft.scoreTip')}><ScoreRing score={p.score} size={40} /></span>, p.tier))}
           </div>
         )}
-        {rec && <More n={rec.picks.length} open={allPicks} onToggle={() => setAllPicks((v) => !v)} />}
-        <p className="mt-2 text-[10.5px] text-mute/80">{t('draft.scoreTip')}</p>
+        {rec && <More n={list.length} open={all} onToggle={() => (counterOn ? setAllCounters : setAllPicks)((v) => !v)} />}
       </section>
     </div>
   )
