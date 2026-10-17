@@ -72,6 +72,26 @@ export function parseSummary(body: unknown): OpggSummary {
   return { level: num(s.level), iconId: iconIdOf(s.profile_image_url), solo: pick('SOLORANKED'), flex: pick('FLEXRANKED') }
 }
 
+export interface OpggChampStat {
+  games: number
+  wins: number
+  kda: number | null // (K+A)/max(D,1) over the season
+}
+
+// v3/{region}/summoners/{puuid}/most-champions/rank: ranked solo games per champion this season (id 0 = the total row)
+export function parseChampions(body: unknown): Record<number, OpggChampStat> {
+  const rows = (body as any)?.data?.my_champion_stats
+  if (!Array.isArray(rows)) throw new OpggError('schema', 200, 'most-champions')
+  const out: Record<number, OpggChampStat> = {}
+  for (const r of rows) {
+    const id = num(r?.id)
+    if (!id || !num(r.play)) continue
+    const b = r.basic ?? {}
+    out[id] = { games: num(r.play), wins: num(r.win), kda: num(b.death) || num(b.kill) || num(b.assist) ? +((num(b.kill) + num(b.assist)) / Math.max(num(b.death), 1)).toFixed(2) : null }
+  }
+  return out
+}
+
 // one game of v3/{region}/summoners/{puuid}/games -> the slim detail the profile page uses
 export function detailFromOpgg(g: any, platform: string): MatchDetail | null {
   const parts = arr(g?.participants)
@@ -190,6 +210,17 @@ export function createOpggSummoner(o: OpggOptions = {}) {
     },
     summary(platform: string, puuid: string): Promise<OpggSummary> {
       return cache.get(`s|${platform}|${puuid}`, TTL.profile, async () => parseSummary(await request(`/api/v3/${code(platform)}/summoners/${e(puuid)}/summary?game_type=SOLORANKED`)))
+    },
+    // this season's ranked solo games per champion; {} when the account has none (OP.GG answers 404)
+    champions(platform: string, puuid: string): Promise<Record<number, OpggChampStat>> {
+      return cache.get(`c|${platform}|${puuid}`, TTL.profile, async () => {
+        try {
+          return parseChampions(await request(`/api/v3/${code(platform)}/summoners/${e(puuid)}/most-champions/rank?game_type=SOLORANKED`))
+        } catch (err) {
+          if (err instanceof OpggError && err.status === 404) return {}
+          throw err
+        }
+      })
     },
     // at least `need` games (fewer when the history ends), newest first
     async games(platform: string, puuid: string, type: GameType, need: number): Promise<MatchDetail[]> {

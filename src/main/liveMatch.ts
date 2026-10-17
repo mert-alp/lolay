@@ -1,9 +1,11 @@
-import type { Lane, LivePlayer } from '../shared/types.ts'
+import type { Lane, LivePlayer, MatchDetail, ProfileRank } from '../shared/types.ts'
 import * as lcu from './lcu.ts'
 import { playerList, type ClientPlayer } from './liveClient.ts'
 import { fetchRiotData, GAME_BUDGET, type RiotData } from './liveRiot.ts'
 import { fromChampSelect, fromGameflow, mergeActiveGame, sortByLane, toLane, type Roster, type RosterPlayer } from './liveRoster.ts'
-import { summarize, summaryFromRiot, type MatchGame, type RankedStats, type Mastery } from './liveStats.ts'
+import { createBlitzSummoner } from './providers/blitzSummoner.ts'
+import { createOpggSummoner, type OpggChampStat } from './providers/opggSummoner.ts'
+import { summarize, summaryFromRiot, summaryFromWeb, type MatchGame, type RankedStats, type Mastery } from './liveStats.ts'
 import { platformOf, regionalOf, type ActiveGame, type Platform } from './riotApi.ts'
 import { riotInvalid, riotUsable, riotWorking, tryRiot } from './riotService.ts'
 import { setState } from './state.ts'
@@ -19,11 +21,17 @@ const CLIENT_POLL_TRIES = 12
 const SPECTATOR_POLL_MS = 30_000 // spectator-v5 only knows the game some time after it starts
 const SPECTATOR_TRIES = 8
 
-// LCU is free and primary for allies; the Riot API serves enemies in game and any player the LCU has nothing on
+// OP.GG (Blitz for the rank when OP.GG fails) by Riot ID is primary: the LCU only answers fully about me.
+// The Riot API (needs a key) stays as the last resort.
 type Raw = { at: number } & (
+  | { src: 'web'; rank: ProfileRank | null; champs: Record<number, OpggChampStat> | null; games: MatchDetail[]; puuid: string; masteries: Mastery[] }
   | { src: 'lcu'; ranked: RankedStats | null; matches: MatchGame[]; masteries: Mastery[] }
   | { src: 'riot'; data: RiotData }
 )
+
+// own instances: the profile page's are local to its IPC module; both are cached and throttled per host
+const opgg = createOpggSummoner()
+const blitz = createBlitzSummoner()
 
 const cache = new Map<string, Raw>()
 const pending = new Set<string>()
@@ -88,6 +96,44 @@ async function lcuRaw(p: RosterPlayer): Promise<Raw | null> {
   }
 }
 
+const lcuMastery = async (puuid: string): Promise<Mastery[]> => {
+  const m = await call('GET', `/lol-champion-mastery/v1/${puuid}/champion-mastery`)
+  return Array.isArray(m) ? m.map((x: any) => ({ championId: x.championId, championLevel: x.championLevel, championPoints: x.championPoints })) : []
+}
+
+// Riot ID -> OP.GG account -> season rank, season games per champion, last games; Blitz gives the rank when OP.GG fails
+async function webRaw(p: RosterPlayer): Promise<Raw | null> {
+  const puuid = p.puuid!
+  let who = p.name && p.tag ? { name: p.name, tag: p.tag } : names.get(puuid)
+  if (!who) {
+    const s = await call('GET', `/lol-summoner/v2/summoners/puuid/${puuid}`)
+    if (s?.gameName && s.tagLine) names.set(puuid, (who = { name: s.gameName, tag: s.tagLine }))
+  }
+  const plat = await platformNow()
+  if (!who || !plat) return null
+  try {
+    const acc = await opgg.account(plat, who.name, who.tag)
+    if (acc) {
+      const [sum, champs, games, masteries] = await Promise.all([
+        opgg.summary(plat, acc.puuid),
+        opgg.champions(plat, acc.puuid).catch(() => null),
+        opgg.games(plat, acc.puuid, 'TOTAL', HISTORY).catch(() => [] as MatchDetail[]),
+        lcuMastery(puuid)
+      ])
+      return { at: Date.now(), src: 'web', rank: sum.solo, champs, games: games.slice(0, HISTORY), puuid: acc.puuid, masteries }
+    }
+  } catch (e) {
+    console.error('live op.gg', who.name, e)
+  }
+  try {
+    const b = await blitz.account(plat, who.name, who.tag)
+    if (b) return { at: Date.now(), src: 'web', rank: b.solo, champs: null, games: [], puuid: b.puuid, masteries: await lcuMastery(puuid) }
+  } catch (e) {
+    console.error('live blitz', who.name, e)
+  }
+  return null
+}
+
 // Riot ID -> API puuid -> league, ranked games, mastery. null = unavailable (no key, rejected key, rate limit, unknown player).
 async function riotRaw(p: RosterPlayer): Promise<Raw | null> {
   const puuid = p.puuid!
@@ -115,7 +161,9 @@ async function fetchRaw(puuid: string) {
   const enemy = enemyInGame(p)
   if (enemy) tried.add(puuid)
   let raw: Raw | null = null
-  for (const step of enemy ? [riotRaw, lcuRaw] : [lcuRaw, riotRaw]) if ((raw = await step(p))) break
+  // the LCU's numbers for other players are not theirs to trust (wins without losses): only for me
+  const mine = p.puuid === me?.puuid
+  for (const step of mine ? [webRaw, lcuRaw, riotRaw] : [webRaw, riotRaw]) if ((raw = await step(p))) break
   cache.set(puuid, raw ?? { at: Date.now() - (TTL_MS - RETRY_MS), src: 'lcu', ranked: null, matches: [], masteries: [] })
 }
 
@@ -175,9 +223,11 @@ function player(p: RosterPlayer): LivePlayer {
     position,
     summary: !raw
       ? null
-      : raw.src === 'riot'
-        ? summaryFromRiot(raw.data.league, raw.data.matches, raw.data.puuid, raw.data.masteries, p.championId, position, autofilled)
-        : { ...summarize(raw.ranked, raw.matches, raw.masteries, p.championId, position, autofilled), source: 'lcu' }
+      : raw.src === 'web'
+        ? summaryFromWeb(raw.rank, raw.champs, raw.games, raw.puuid, raw.masteries, p.championId, position, autofilled)
+        : raw.src === 'riot'
+          ? summaryFromRiot(raw.data.league, raw.data.matches, raw.data.puuid, raw.data.masteries, p.championId, position, autofilled)
+          : { ...summarize(raw.ranked, raw.matches, raw.masteries, p.championId, position, autofilled), source: 'lcu' }
   }
 }
 

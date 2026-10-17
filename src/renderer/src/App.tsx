@@ -89,7 +89,7 @@ export default function App() {
                   state.phase === 'ChampSelect' ? (
                     <Draft state={state} st={st} onDetails={() => go('champion')} toast={toast} />
                   ) : (
-                    <LiveMatch state={state} st={st} />
+                    <LiveMatch state={state} st={st} onPick={(id) => pick(id)} />
                   )
                 ) : (
                   <Settings state={state} />

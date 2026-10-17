@@ -1,4 +1,4 @@
-import type { Lane, LiveTag, PlayerSummary } from '../shared/types.ts'
+import type { Lane, LiveTag, MatchDetail, PlayerSummary, ProfileRank } from '../shared/types.ts'
 import type { LeagueEntry, Match } from './riotApi.ts'
 
 // Only the LCU fields we read
@@ -132,4 +132,29 @@ export function summaryFromRiot(
     return [{ queueId, gameCreation, gameDuration, participants: [{ championId: p.championId, stats: { win: p.win, kills: p.kills, deaths: p.deaths, assists: p.assists }, timeline: TIMELINE[p.teamPosition] }] }]
   })
   return { ...summarize(ranked, games, masteries, championId, assigned, autofilled), source: 'riot' }
+}
+
+const POS_TIMELINE: Record<Lane, { lane: string; role?: string }> = { top: { lane: 'TOP' }, jungle: { lane: 'JUNGLE' }, middle: { lane: 'MIDDLE' }, bottom: { lane: 'BOTTOM', role: 'CARRY' }, support: { lane: 'BOTTOM', role: 'SUPPORT' } }
+
+// OP.GG / Blitz data (season rank, season games per champion, recent games with all ten players) -> the same summary
+export function summaryFromWeb(
+  rank: ProfileRank | null,
+  champs: Record<number, { games: number; wins: number; kda: number | null }> | null,
+  games: MatchDetail[],
+  puuid: string,
+  masteries: Mastery[],
+  championId: number,
+  assigned: Lane | null,
+  autofilled?: boolean
+): PlayerSummary {
+  const ranked: RankedStats | null = rank ? { queueMap: { RANKED_SOLO_5x5: { tier: rank.tier, division: rank.division, leaguePoints: rank.lp, wins: rank.wins, losses: rank.losses } } } : null
+  const rows: MatchGame[] = games.flatMap((g) => {
+    const p = g.players.find((x) => x.puuid === puuid)
+    if (!p) return []
+    const win = g.teams.find((t) => t.teamId === p.teamId)?.win ?? false
+    return [{ queueId: g.queueId, gameCreation: g.at, gameDuration: g.duration, participants: [{ championId: p.championId, stats: { win, kills: p.kills, deaths: p.deaths, assists: p.assists }, timeline: p.position ? POS_TIMELINE[p.position] : undefined }] }]
+  })
+  const s = summarize(ranked, rows, masteries, championId, assigned, autofilled)
+  const c = champs?.[championId]
+  return { ...s, champ: c ? { games: c.games, wins: c.wins, kda: c.kda, season: true } : s.champ, source: champs ? 'opgg' : 'blitz' }
 }

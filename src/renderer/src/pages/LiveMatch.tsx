@@ -1,23 +1,27 @@
 import type { AppState, LivePlayer, StaticData } from '@shared/types'
 import { useT, type Key } from '../i18n'
-import { PlayerCard } from '../components/PlayerCard'
+import { PlayerRow, ROW_GRID } from '../components/PlayerCard'
 import { Card } from '../components/ui'
 
-function Column({ title, players, st, enemy }: { title: string; players: LivePlayer[]; st: StaticData | null; enemy: boolean }) {
+function Team({ title, players, st, enemy, onPick }: { title: string; players: LivePlayer[]; st: StaticData | null; enemy: boolean; onPick: (championId: number) => void }) {
+  const t = useT()
   return (
-    <section>
-      <div className="mb-2.5 flex items-center gap-2 px-0.5">
+    <Card className="overflow-hidden">
+      <div className={`flex items-center gap-2 border-b border-line px-3 py-2 ${enemy ? 'bg-loss/[.06]' : 'bg-blue/[.06]'}`}>
         <span className={`size-2 shrink-0 rounded-full ${enemy ? 'bg-loss shadow-[0_0_10px_rgba(239,68,68,.8)]' : 'bg-blue shadow-[0_0_10px_rgba(59,130,246,.8)]'}`} />
-        <h3 className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{title}</h3>
+        <h3 className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-fg/90">{title}</h3>
       </div>
-      <div className="space-y-2.5">
-        {players.map((p) => <PlayerCard key={p.key} p={p} st={st} enemy={enemy} />)}
+      <div className={`hidden border-b border-line/70 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-mute ${ROW_GRID}`}>
+        <span>{t('live.colPlayer')}</span><span>{t('live.colRank')}</span><span>{t('live.colSeason')}</span><span>{t('live.colChamp')}</span><span>{t('live.colRecent')}</span>
       </div>
-    </section>
+      <div className="divide-y divide-line/60">
+        {players.map((p) => <PlayerRow key={p.key} p={p} st={st} enemy={enemy} onPick={onPick} />)}
+      </div>
+    </Card>
   )
 }
 
-export function LiveMatch({ state, st }: { state: AppState; st: StaticData | null }) {
+export function LiveMatch({ state, st, onPick }: { state: AppState; st: StaticData | null; onPick: (championId: number) => void }) {
   const t = useT()
   const live = state.live
   const phaseKey = `phase.${state.phase}` as Key
@@ -44,7 +48,7 @@ export function LiveMatch({ state, st }: { state: AppState; st: StaticData | nul
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1180px]">
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <h1 className="text-[17px] sm:text-[18px] font-semibold">{t('live.title')}</h1>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-[11.5px] font-medium text-gold">
@@ -58,9 +62,9 @@ export function LiveMatch({ state, st }: { state: AppState; st: StaticData | nul
           </span>
         )}
       </div>
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 md:gap-4">
-        <Column title={t('live.ally')} players={live.myTeam} st={st} enemy={false} />
-        <Column title={t('live.enemy')} players={live.enemyTeam} st={st} enemy />
+      <div className="space-y-4">
+        <Team title={t('live.ally')} players={live.myTeam} st={st} enemy={false} onPick={onPick} />
+        <Team title={t('live.enemy')} players={live.enemyTeam} st={st} enemy onPick={onPick} />
       </div>
     </div>
   )

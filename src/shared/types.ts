@@ -254,12 +254,12 @@ export interface PlayerSummary {
   recent: boolean[] // newest first, true = win; empty = no match history
   avg: [number, number, number] | null // avg kills, deaths, assists
   kda: number | null // (K+A)/max(D,1) over the window
-  champ: { games: number; wins: number } // current champion within the window
+  champ: { games: number; wins: number; kda?: number | null; season?: true } // current champion: this season's ranked games (season) or within the window
   mastery: { level: number; points: number } | null
   roles: { lane: Lane; pct: number }[] // most played roles (Summoner's Rift games), pct of those games
   tags: LiveTag[]
   streak: number // +N win / -N loss streak, 0 below 3
-  source?: 'lcu' | 'riot' // where the numbers came from; absent in previews
+  source?: 'lcu' | 'riot' | 'opgg' | 'blitz' // where the numbers came from; absent in previews
 }
 
 export interface LivePlayer {

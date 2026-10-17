@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { bansOf, fromChampSelect, fromGameflow, mergeActiveGame, sortByLane } from '../src/main/liveRoster.ts'
-import { summarize, summaryFromRiot, type MatchGame } from '../src/main/liveStats.ts'
+import { summarize, summaryFromRiot, summaryFromWeb, type MatchGame } from '../src/main/liveStats.ts'
 import type { ActiveGame, LeagueEntry, Match } from '../src/main/riotApi.ts'
 import { damagePct, teamDamage } from '../src/shared/damage.ts'
 
@@ -268,4 +268,19 @@ test('mergeActiveGame: enemy bots keep their slot, no puuid', () => {
   const r = { my: [], enemy: [{ key: 'b', puuid: null, championId: 32, spells: [], position: null, name: null, tag: null, hidden: false, bot: true, me: false }] }
   const m = mergeActiveGame(r, active([part('api-me', 'Me#T', 100, 1), part('', '', 200, 32, true), part('', '', 200, 33, true)]), 'me#t')!
   assert.deepEqual(m.roster.enemy.map((p) => [p.bot, p.puuid, p.championId]), [[true, null, 32], [true, null, 33]])
+})
+
+test('summaryFromWeb: season W/L from the rank, champion season stats, recent games from the player\'s own side', () => {
+  const p = (puuid: string, teamId: number, championId: number) => ({ puuid, name: '', tag: '', championId, teamId, position: 'middle' as const, level: 18, kills: 5, deaths: 2, assists: 7, cs: 200, vision: 20, wards: 8, damage: 20000, gold: 12000, items: [], spells: [], keystone: 0, tree: 0 })
+  const game = (i: number, myTeamWins: boolean) => ({
+    id: `TR1_${i}`, queueId: 420, at: 1000 - i, duration: 1800,
+    players: [p('me', 100, 103), p('foe', 200, 238)],
+    teams: [{ teamId: 100, win: myTeamWins, kills: 0, gold: 0, objectives: { baron: 0, dragon: 0, herald: 0, tower: 0, inhibitor: 0 } }, { teamId: 200, win: !myTeamWins, kills: 0, gold: 0, objectives: { baron: 0, dragon: 0, herald: 0, tower: 0, inhibitor: 0 } }]
+  })
+  const s = summaryFromWeb({ tier: 'EMERALD', division: 'IV', lp: 63, wins: 112, losses: 96 }, { 103: { games: 14, wins: 9, kda: 4.4 } }, [game(1, true), game(2, false), game(3, true)], 'me', [], 103, 'middle')
+  assert.deepEqual([s.wins, s.losses, s.rank?.tier], [112, 96, 'EMERALD'])
+  assert.deepEqual(s.recent, [true, false, true])
+  assert.deepEqual(s.champ, { games: 14, wins: 9, kda: 4.4, season: true })
+  assert.equal(s.source, 'opgg')
+  assert.deepEqual(summaryFromWeb(null, null, [], 'me', [], 103, null).champ, { games: 0, wins: 0 })
 })
