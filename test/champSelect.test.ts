@@ -69,7 +69,7 @@ test('phaseEndsAt: the client countdown from now, none when unlimited or missing
   assert.equal(phaseEndsAt(base, 1000), null)
 })
 
-test('turnStarted fires once per turn: on the edge, not while it lasts', { todo: 'turnStarted gövdesi kullanıcıda' }, () => {
+test('turnStarted fires once per turn: on the edge, not while it lasts', () => {
   const turn = (id: number, inProgress: boolean, type = 'pick'): CsSession => ({ ...session({}), actions: [[{ id, actorCellId: 2, type, completed: false, isInProgress: inProgress }]] })
   let r = turnStarted(null, turn(7, false))
   assert.deepEqual(r, { key: null, fire: false }) // a later action of mine: not my turn yet

@@ -66,6 +66,7 @@ export function phaseEndsAt(session: CsSession, now = Date.now()): number | null
 // The alert fires once when my turn starts, not on every session update while it lasts.
 // prev = the action id returned last time; key = my ban / pick action in progress now (null = not my turn)
 export function turnStarted(prev: number | null, session: CsSession): { key: number | null; fire: boolean } {
-  // TODO(kullanıcı): 5-10 satır
-  return { key: prev, fire: false }
+  const now = (session.actions ?? []).flat().find((a) => a.actorCellId === session.localPlayerCellId && (a.type === 'ban' || a.type === 'pick') && a.isInProgress && !a.completed && typeof a.id === 'number')
+  const key = now?.id ?? null
+  return { key, fire: key != null && key !== prev }
 }
