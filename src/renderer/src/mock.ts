@@ -232,6 +232,7 @@ export function installMock() {
     draftHover: async (id) => { picked = id; emit(); return true },
     draftLock: async () => true,
     draftBan: async () => true,
+    queueNames: async () => ({}),
     draftSetSpells: async (a, b) => { spells = [a, b]; if (a === 4 || b === 4) settings = { ...settings, flashOn: b === 4 ? 'F' : 'D' }; emit(); return true }
   }
   window.lolay = api

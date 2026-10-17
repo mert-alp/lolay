@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from 'react'
+import { useEffect, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { champIcon, spellIcon, type MatchEntry, type MatchPlayer, type StaticData } from '@shared/types'
 import { fmtDuration, timeAgo } from '../../../main/profileStats.ts'
 import { useLang, useT, type Key, type TFn } from '../i18n'
@@ -9,10 +9,31 @@ import { MatchDetail } from './MatchDetail'
 export const kdaColor = (k: number) => (k >= 5 ? 'text-[#ff8a3d]' : k >= 4 ? 'text-blue' : k >= 3 ? 'text-win' : 'text-fg')
 export const kdaOf = (p: Pick<MatchPlayer, 'kills' | 'deaths' | 'assists'>) => (p.kills + p.assists) / Math.max(p.deaths, 1)
 
-export function queueLabel(t: TFn, id: number): string {
+// app label first, then the client's own name for newer modes, else "Diğer"
+export function queueLabel(t: TFn, id: number, client: Record<number, string> = {}): string {
   const k = `q.${id}` as Key
   const v = t(k)
-  return v === k ? t('q.other') : v
+  return v !== k ? v : client[id] ?? t('q.other')
+}
+
+let clientQueues: Promise<Record<number, string>> | null = null
+const loadQueues = () =>
+  (clientQueues ??= window.lolay.queueNames().then((q) => {
+    if (!Object.keys(q).length) clientQueues = null // client closed: ask again next time
+    return q
+  }, () => ((clientQueues = null), {})))
+
+// asks the client only for a queue the app has no label for
+function useQueueName(t: TFn, id: number) {
+  const [client, setClient] = useState<Record<number, string>>({})
+  const known = t(`q.${id}` as Key) !== `q.${id}`
+  useEffect(() => {
+    if (known) return
+    let live = true
+    void loadQueues().then((q) => live && setClient(q))
+    return () => { live = false }
+  }, [known])
+  return queueLabel(t, id, client)
 }
 
 export const riotIdOf = (p: { name: string; tag: string }) => (p.name && p.tag ? `${p.name}#${p.tag}` : null)
@@ -89,6 +110,7 @@ interface Props {
 export function MatchRow({ m, st, open, onToggle, onOpenProfile }: Props) {
   const t = useT()
   const lang = useLang()
+  const queue = useQueueName(t, m.queueId)
   const me = m.me
   const tone = m.remake ? 'mute' : m.win ? 'win' : 'loss'
   const tint = { win: 'text-win', loss: 'text-loss', mute: 'text-mute' }[tone]
@@ -113,7 +135,7 @@ export function MatchRow({ m, st, open, onToggle, onOpenProfile }: Props) {
         className="relative flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2.5 py-2.5 pr-3 pl-[18px]"
       >
         <div className="w-[92px] shrink-0 leading-tight">
-          <div className={`text-[12.5px] leading-[1.15] font-bold ${tint}`}>{queueLabel(t, m.queueId)}</div>
+          <div className={`text-[12.5px] leading-[1.15] font-bold ${tint}`}>{queue}</div>
           <div className="mt-0.5 truncate text-[11px] text-mute">{timeAgo(m.at, lang)}</div>
           <div className="my-1.5 h-px w-6 bg-line" />
           <div className="truncate text-[11px]">

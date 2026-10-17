@@ -121,7 +121,7 @@ const tr = {
   'pf.err.lcu_off': 'Kendi profilin için League istemcisi açık olmalı. Üstteki kutudan bir oyuncu arayabilirsin.',
   'pf.err.server': 'Riot API şu an yanıt vermiyor. Biraz sonra tekrar dene.',
   'q.420': 'Dereceli Tek/Çift', 'q.440': 'Esnek', 'q.400': 'Normal', 'q.430': 'Normal', 'q.490': 'Normal', 'q.480': 'Hızlı Oyun', 'q.450': 'ARAM', 'q.2400': 'ARAM Mayhem',
-  'q.1700': 'Arena', 'q.1710': 'Arena', 'q.900': 'URF', 'q.1900': 'URF', 'q.1020': 'Tek Şampiyon', 'q.700': 'Clash', 'q.1300': 'Nexus Blitz', 'q.1400': 'Ultimate Spellbook',
+  'q.1700': 'Arena', 'q.1710': 'Arena', 'q.1740': 'Arena', 'q.900': 'URF', 'q.1900': 'URF', 'q.1020': 'Tek Şampiyon', 'q.700': 'Clash', 'q.1300': 'Nexus Blitz', 'q.1400': 'Ultimate Spellbook',
   'q.830': 'Botlara Karşı', 'q.840': 'Botlara Karşı', 'q.850': 'Botlara Karşı', 'q.0': 'Özel', 'q.3140': 'Antrenman', 'q.other': 'Diğer'
 }
 export type Key = keyof typeof tr
@@ -246,7 +246,7 @@ const en: Record<Key, string> = {
   'pf.err.lcu_off': 'Your own profile needs the League client to be running. You can still search for a player above.',
   'pf.err.server': 'The Riot API is not responding. Try again in a moment.',
   'q.420': 'Ranked Solo/Duo', 'q.440': 'Flex', 'q.400': 'Normal', 'q.430': 'Normal', 'q.490': 'Normal', 'q.480': 'Swiftplay', 'q.450': 'ARAM', 'q.2400': 'ARAM Mayhem',
-  'q.1700': 'Arena', 'q.1710': 'Arena', 'q.900': 'URF', 'q.1900': 'URF', 'q.1020': 'One for All', 'q.700': 'Clash', 'q.1300': 'Nexus Blitz', 'q.1400': 'Ultimate Spellbook',
+  'q.1700': 'Arena', 'q.1710': 'Arena', 'q.1740': 'Arena', 'q.900': 'URF', 'q.1900': 'URF', 'q.1020': 'One for All', 'q.700': 'Clash', 'q.1300': 'Nexus Blitz', 'q.1400': 'Ultimate Spellbook',
   'q.830': 'Co-op vs AI', 'q.840': 'Co-op vs AI', 'q.850': 'Co-op vs AI', 'q.0': 'Custom', 'q.3140': 'Practice', 'q.other': 'Other'
 }
 

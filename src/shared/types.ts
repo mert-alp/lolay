@@ -492,6 +492,7 @@ export interface LolayApi {
   draftLock(championId: number): Promise<boolean>
   draftBan(championId: number, complete: boolean): Promise<boolean> // hover my ban; complete = also lock it in
   draftSetSpells(spell1Id: number, spell2Id: number): Promise<boolean>
+  queueNames(): Promise<Record<number, string>> // the client's own queue names, {} without the client
 }
 
 export const IPC = {
@@ -517,5 +518,6 @@ export const IPC = {
   draftHover: 'draft:hover',
   draftLock: 'draft:lock',
   draftBan: 'draft:ban',
-  draftSetSpells: 'draft:setSpells'
+  draftSetSpells: 'draft:setSpells',
+  queueNames: 'queues:names'
 } as const

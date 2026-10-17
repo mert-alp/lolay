@@ -61,4 +61,14 @@ export function registerProfileIpc() {
   ipcMain.handle(IPC.profileGet, (_e, q: 'me' | ProfileQuery) => safe(() => svc.get(q)))
   ipcMain.handle(IPC.profileMatches, (_e, q: MatchesQuery) => safe(() => svc.matches(q)))
   ipcMain.handle(IPC.profileMatch, (_e, id: string) => safe(() => svc.match(String(id))))
+
+  // modes newer than the app's own labels ("Diğer" otherwise); kept once the client has answered
+  let queues: Record<number, string> | null = null
+  ipcMain.handle(IPC.queueNames, async () => {
+    if (queues) return queues
+    const list = await lcuGet('/lol-game-queues/v1/queues')
+    const names: Record<number, string> = Object.fromEntries((Array.isArray(list) ? list : []).filter((q) => q?.id && q.description).map((q) => [q.id, String(q.description)]))
+    if (Object.keys(names).length) queues = names
+    return names
+  })
 }
