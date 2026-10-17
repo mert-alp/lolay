@@ -1,13 +1,14 @@
 import type { ChampSelectState, Lane, Settings } from '../shared/types.ts'
 import { flashSlot, orderSpells, prefKey, samePair, watchSpells, type SpellWatch } from '../shared/prefs.ts'
 import { applyBuild } from './apply.ts'
-import { derivePhase, deriveSelection, deriveTurn, selectionKey } from './champSelect.ts'
+import { derivePhase, deriveSelection, deriveTurn, phaseEndsAt, selectionKey, turnStarted } from './champSelect.ts'
 import type { CsSession, Selection } from './champSelect.ts'
 import { enemiesOf } from './draftActions.ts'
 import { recordBans } from './recommend.ts'
 import { defaultRunePerks, getBuild } from './services.ts'
 import { getSettings, updateSettings } from './settings.ts'
 import { getState, setState } from './state.ts'
+import { alertTurn } from './win.ts'
 
 const SUMMONERS_RIFT = 11
 const MATCHUP_WAIT = 8000
@@ -22,6 +23,8 @@ let result: { key: string; parts: NonNullable<ChampSelectState['importResult']> 
 let prefetchKey = ''
 let seenBans = new Set<number>() // my ban action ids already counted
 let watch: SpellWatch = { seen: null, ours: null }
+let turnKey: number | null = null // my action whose turn was last alerted
+let endsAt: number | null = null // read when the session arrives: refresh() also runs later
 
 export function setMapId(id: number) {
   mapId = id
@@ -31,6 +34,10 @@ export function setMapId(id: number) {
 export function onChampSelect(data: CsSession | null, eventType = 'Update') {
   if (eventType === 'Delete' || !data) return resetChampSelect()
   session = data
+  endsAt = phaseEndsAt(data)
+  const turn = turnStarted(turnKey, data)
+  turnKey = turn.key
+  if (turn.fire && getSettings().turnAlert) alertTurn()
   trackSpells(data)
   const banHistory = recordBans(data, seenBans, getSettings().banHistory)
   if (banHistory) setState({ settings: updateSettings({ banHistory }) })
@@ -42,6 +49,7 @@ export function resetChampSelect(keepBans = false) {
   session = null
   appliedKey = importedKey = failedKey = importingKey = result = null
   prefetchKey = ''
+  turnKey = endsAt = null
   if (!keepBans) seenBans = new Set()
   watch = { seen: null, ours: null }
   setState({ champSelect: null })
@@ -69,7 +77,8 @@ function refresh() {
       importResult: result?.key === key ? result.parts : null, // a new champion or lane starts clean
       autoImportAllowed,
       ...deriveTurn(session),
-      phase: derivePhase(session)
+      phase: derivePhase(session),
+      endsAt
     }
   })
   if (sel.championId) prefetch(sel, key)

@@ -28,3 +28,12 @@ export function flashOnTop() {
   win.setAlwaysOnTop(true)
   setTimeout(() => win?.setAlwaysOnTop(false), 1000)
 }
+
+// my pick / ban turn: up front without taking focus, flashing in the taskbar until looked at
+export function alertTurn() {
+  if (!win) return
+  showWindowInactive()
+  if (win.isFocused()) return
+  win.flashFrame(true)
+  win.once('focus', () => win?.flashFrame(false))
+}

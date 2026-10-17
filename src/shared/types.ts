@@ -81,6 +81,7 @@ export interface Build {
   counters: { strong: Matchup[]; weak: Matchup[] } // strong = we beat them, weak = they beat us
   partial: boolean // true when key sections are missing (provider fallback or incomplete page)
   damage?: Damage | null // Lolalytics only: average damage split of the champion, absolute numbers
+  timeWr?: (number | null)[] // Lolalytics only: win rate per game length, TIME_BUCKETS minutes; null = no games
   insufficient?: true // the source has too little data for this champion/lane/rank; every list is empty
   fetchedAt: number
 }
@@ -92,6 +93,8 @@ export interface RunePagesQuery {
   vsLaner?: number // enemy champion in our lane
   vsJungler?: number // enemy jungler (ignored when we play jungle: pass the enemy jungler as vsLaner)
 }
+
+export const TIME_BUCKETS = ['0-15', '15-20', '20-25', '25-30', '30-35', '35-40', '40+'] // Lolalytics' own labels
 
 export interface BuildQuery {
   championId: number
@@ -154,6 +157,7 @@ export interface Settings {
   autoImport: { runes: boolean; spells: boolean; items: boolean }
   autoAccept: boolean
   autoAcceptDelay: number // seconds 0..8
+  turnAlert: boolean // my pick / ban turn: bring the window up and flash it in the taskbar
   flashOn: 'D' | 'F'
   startWithWindows: boolean
   installDir?: string // discovered League install dir (lockfile cache)
@@ -229,6 +233,7 @@ export interface ChampSelectState {
   pickActionId: number | null // my unfinished pick action; null = nothing to hover/lock (blind pick, ARAM, already locked)
   myTurn: boolean // that action is in progress
   phase: 'ban' | 'pick' | 'waiting' | 'done' // my open ban / pick action in progress; waiting = a later action of mine; done = none left
+  endsAt: number | null // epoch ms when the current turn runs out; null = unknown
 }
 
 export type LiveTag = 'autofill' | 'offrole' | 'otp'

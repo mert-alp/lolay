@@ -70,6 +70,12 @@ function counters(d: any, lane: Lane) {
   return splitCounters(rows)
 }
 
+// sidebar.time: games and wins per game length bucket, keyed 1..7 (TIME_BUCKETS)
+export function timeWr(t: any): (number | null)[] | undefined {
+  if (!t?.time) return undefined
+  return [1, 2, 3, 4, 5, 6, 7].map((k) => (t.time[k] > 0 && t.timeWin?.[k] != null ? +((t.timeWin[k] / t.time[k]) * 100).toFixed(2) : null))
+}
+
 export function toBuild(d: any, tier: Tier): Build {
   const h = d.header
   const pick = d.summary?.pick
@@ -110,6 +116,7 @@ export function toBuild(d: any, tier: Tier): Build {
     skillOrder: pick.skillorder?.id ? String(pick.skillorder.id).split('').map((c) => SKILL[Number(c)]).join('') : '',
     counters: counters(d, lane),
     damage: h.damage ? { physical: Number(h.damage.physical) || 0, magic: Number(h.damage.magic) || 0, true: Number(h.damage.true) || 0 } : null,
+    timeWr: timeWr(d.sidebar?.time),
     partial: !core || !pick.skillorder?.id,
     fetchedAt: Date.now()
   }

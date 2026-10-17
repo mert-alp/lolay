@@ -60,6 +60,9 @@ export function Settings({ state }: { state: AppState }) {
           <Row title={t('set.accept')} desc={t('set.accept.d')}>
             <Toggle checked={s.autoAccept} label={t('set.accept')} onChange={(v) => set({ autoAccept: v })} />
           </Row>
+          <Row title={t('set.turnAlert')} desc={t('set.turnAlert.d')}>
+            <Toggle checked={s.turnAlert} label={t('set.turnAlert')} onChange={(v) => set({ turnAlert: v })} />
+          </Row>
           <Row title={t('set.delay')}>
             <div className="flex items-center gap-4">
               <Slider

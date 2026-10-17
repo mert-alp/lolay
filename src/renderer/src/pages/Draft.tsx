@@ -216,6 +216,37 @@ function AllyCard({ p, st, build, tier: appTier }: { p: LivePlayer; st: StaticDa
   )
 }
 
+// enemy champion with its own lane stats (ranked hides who plays it); the likely laner / jungler is marked
+function EnemyCard({ p, st, tier, role, damage }: { p: LivePlayer; st: StaticData | null; tier: Tier; role: Key | null; damage: Damage | null | undefined }) {
+  const t = useT()
+  const c = p.championId ? st?.champions[p.championId] : undefined
+  const meta = useChampMeta(p.championId, p.position, tier, !!c)
+  return (
+    <div className={`fade-up flex min-w-[150px] flex-1 basis-[150px] flex-col gap-1.5 rounded-xl border bg-card px-2.5 py-2 ${role ? 'border-loss/45' : 'border-line'}`}>
+      <div className="flex items-center gap-2.5">
+        {c && st ? (
+          <div className="relative shrink-0">
+            <img src={champIcon(st.version, c.id)} alt={c.name} className="size-9 rounded-lg ring-1 ring-loss/40" />
+            {meta?.tier && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border bg-[#0b0e14] px-1 text-[9px] leading-[12px] font-extrabold" style={{ color: tierColor(meta.tier), borderColor: tierColor(meta.tier) + '77' }}>{meta.tier}</span>}
+          </div>
+        ) : (
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-dashed border-line text-mute/60">—</span>
+        )}
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className={`truncate text-[12.5px] font-semibold ${c ? '' : 'text-mute'}`}>{c?.name ?? '—'}</div>
+          <div className="truncate text-[10.5px] text-mute">
+            {!c ? t('live.opponent') : meta === undefined ? <Sk w="60%" h={9} /> : meta ? (
+              <><span className={`font-semibold ${wrColor(meta.wr)}`}>{meta.wr.toFixed(1)}%</span> · {p.position ? t(`lane.${p.position}` as Key) : t('live.opponent')}</>
+            ) : t('live.opponent')}
+          </div>
+        </div>
+        {role && <Chip className="shrink-0 border-loss/40 bg-loss/10 text-loss">{t(role)}</Chip>}
+      </div>
+      {c && <div className="h-[17px]"><DamageChips d={damage} /></div>}
+    </div>
+  )
+}
+
 function TeamDamage({ dmg, label, hint = true }: { dmg: ReturnType<typeof teamDamage>; label: string; hint?: boolean }) {
   const t = useT()
   const rows: [keyof Damage, Key][] = [['physical', 'draft.ad'], ['magic', 'draft.ap'], ['true', 'draft.true']]
@@ -295,6 +326,18 @@ function Tip({ label, show, children, className = '' }: { label: string; show: b
   )
 }
 
+// whole seconds left until endsAt, ticking locally between session updates; null = no countdown
+function useCountdown(endsAt: number | null) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (!endsAt) return
+    setNow(Date.now())
+    const i = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(i)
+  }, [endsAt])
+  return endsAt ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : null
+}
+
 type Tab = 'recs' | 'all' | 'build'
 
 const PHASE_STYLE = {
@@ -367,6 +410,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
   const phase = cs?.phase ?? 'done'
   const banning = phase === 'ban'
   const myTurn = phase === 'ban' || phase === 'pick'
+  const left = useCountdown(cs?.endsAt ?? null)
   const [banSel, setBanSel] = useState(0)
   useEffect(() => { if (!banning) setBanSel(0) }, [banning])
 
@@ -528,6 +572,11 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
             <div role="status" className={`flex w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold ${PHASE_STYLE[phase]}`}>
               <span className={`size-2 rounded-full bg-current ${myTurn ? 'animate-pulse' : 'opacity-60'}`} />
               {t(`draft.phase.${phase}` as Key)}
+              {left != null && (
+                <span className={`ml-auto text-[13px] font-bold tabular-nums ${myTurn && left <= 10 ? 'animate-pulse text-loss' : ''}`}>
+                  {left}<span className="ml-0.5 text-[11px] font-semibold opacity-70">{t('draft.secs')}</span>
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -590,20 +639,9 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
 
       <div className="flex flex-wrap gap-2 sm:gap-3">
         {enemies.slice(0, 5).map((p) => {
-          const c = p.championId ? st?.champions[p.championId] : undefined
-          return (
-            <div key={p.key} className="flex h-[44px] min-w-[140px] flex-1 basis-[140px] items-center gap-2.5 rounded-xl border border-line bg-card px-2.5">
-              {c && st ? (
-                <img src={champIcon(st.version, c.id)} alt={c.name} className="size-7 shrink-0 rounded-lg ring-1 ring-loss/40" />
-              ) : (
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-dashed border-line text-mute/60">—</span>
-              )}
-              <div className="min-w-0 leading-tight">
-                <div className={`truncate text-[12.5px] font-semibold ${c ? '' : 'text-mute'}`}>{c?.name ?? '—'}</div>
-                <div className="text-[10.5px] text-mute">{t('live.opponent')}</div>
-              </div>
-            </div>
-          )
+          // as the jungler the suggestion's enemyId is the enemy jungler
+          const role: Key | null = !p.championId ? null : p.championId === rec?.enemyJungleId || (p.championId === rec?.enemyId && myLane === 'jungle') ? 'draft.jungler' : p.championId === rec?.enemyId ? 'draft.laner' : null
+          return <EnemyCard key={p.key} p={p} st={st} tier={state.tier} role={role} damage={p.championId ? build(p.championId, p.position)?.damage : null} />
         })}
       </div>
 

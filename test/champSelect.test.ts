@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { deriveSelection, selectionKey } from '../src/main/champSelect.ts'
+import { deriveSelection, phaseEndsAt, selectionKey, turnStarted } from '../src/main/champSelect.ts'
 import type { CsSession } from '../src/main/champSelect.ts'
 
 const none = { appliedKey: null }
@@ -60,4 +60,26 @@ test('lane mapping', () => {
 test('unknown local player', () => {
   const sess = { ...session({}), localPlayerCellId: 9 }
   assert.deepEqual(deriveSelection(sess, none), { championId: 0, lane: null, locked: false, shouldApply: false })
+})
+
+test('phaseEndsAt: the client countdown from now, none when unlimited or missing', () => {
+  const base = session({})
+  assert.equal(phaseEndsAt({ ...base, timer: { adjustedTimeLeftInPhase: 27_000 } }, 1000), 28_000)
+  assert.equal(phaseEndsAt({ ...base, timer: { adjustedTimeLeftInPhase: 27_000, isInfinite: true } }, 1000), null)
+  assert.equal(phaseEndsAt(base, 1000), null)
+})
+
+test('turnStarted fires once per turn: on the edge, not while it lasts', { todo: 'turnStarted gövdesi kullanıcıda' }, () => {
+  const turn = (id: number, inProgress: boolean, type = 'pick'): CsSession => ({ ...session({}), actions: [[{ id, actorCellId: 2, type, completed: false, isInProgress: inProgress }]] })
+  let r = turnStarted(null, turn(7, false))
+  assert.deepEqual(r, { key: null, fire: false }) // a later action of mine: not my turn yet
+  r = turnStarted(r.key, turn(7, true))
+  assert.deepEqual(r, { key: 7, fire: true }) // my turn starts
+  r = turnStarted(r.key, turn(7, true))
+  assert.deepEqual(r, { key: 7, fire: false }) // same turn, next session update
+  r = turnStarted(r.key, turn(9, true, 'ban'))
+  assert.deepEqual(r, { key: 9, fire: true }) // a new action of mine (ban then pick, or the next pick)
+  assert.deepEqual(turnStarted(9, session({})), { key: null, fire: false }) // nothing in progress
+  const theirs: CsSession = { ...session({}), actions: [[{ id: 3, actorCellId: 1, type: 'pick', completed: false, isInProgress: true }]] }
+  assert.deepEqual(turnStarted(null, theirs), { key: null, fire: false }) // someone else's turn
 })

@@ -11,6 +11,7 @@ const defaults: Settings = {
   autoImport: { runes: true, spells: true, items: true },
   autoAccept: false,
   autoAcceptDelay: 3,
+  turnAlert: true,
   flashOn: 'F',
   startWithWindows: true,
   watchlist: [],

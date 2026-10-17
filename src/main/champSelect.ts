@@ -6,6 +6,7 @@ export interface CsSession {
   myTeam: { cellId: number; championId: number; championPickIntent: number; assignedPosition: string; spell1Id?: number; spell2Id?: number }[]
   theirTeam?: { championId: number; assignedPosition?: string }[]
   actions: { id?: number; actorCellId: number; type: string; completed: boolean; championId?: number; isInProgress?: boolean }[][]
+  timer?: { adjustedTimeLeftInPhase?: number; isInfinite?: boolean } // not in a recorded fixture yet: optional everywhere
 }
 
 export interface Selection {
@@ -52,4 +53,17 @@ export function deriveTurn(session: CsSession): Turn {
   const me = session.myTeam?.find((p) => p.cellId === session.localPlayerCellId)
   const open = (session.actions ?? []).flat().find((a) => a.actorCellId === session.localPlayerCellId && a.type === 'pick' && !a.completed && typeof a.id === 'number')
   return { pickActionId: open?.id ?? null, myTurn: !!open?.isInProgress, spell1Id: me?.spell1Id ?? 0, spell2Id: me?.spell2Id ?? 0 }
+}
+
+// epoch ms when the current turn / phase runs out, from the client's countdown; null = unknown or no limit
+export function phaseEndsAt(session: CsSession, now = Date.now()): number | null {
+  const left = session.timer?.adjustedTimeLeftInPhase
+  return !session.timer?.isInfinite && typeof left === 'number' && left > 0 ? now + left : null
+}
+
+// The alert fires once when my turn starts, not on every session update while it lasts.
+// prev = the action id returned last time; key = my ban / pick action in progress now (null = not my turn)
+export function turnStarted(prev: number | null, session: CsSession): { key: number | null; fire: boolean } {
+  // TODO(kullanıcı): 5-10 satır
+  return { key: prev, fire: false }
 }

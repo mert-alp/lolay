@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react'
-import { champIcon, type ApplyRequest, type Build, type ChampSelectState, type Matchup, type Settings, type StaticData } from '@shared/types'
+import { champIcon, TIME_BUCKETS, type ApplyRequest, type Build, type ChampSelectState, type Matchup, type Settings, type StaticData } from '@shared/types'
 import { useT, type Key } from '../i18n'
 import { fmtGames, fmtPct, wrColor } from '../util'
 import { Button, Card, Eyebrow } from './ui'
@@ -40,6 +40,37 @@ function Matchups({ title, list, st, enemyId }: { title: string; list: Matchup[]
         })}
       </div>
     </div>
+  )
+}
+
+// win rate per game length around the 50% line: up = wins more, the strongest bucket in gold
+function PowerCurve({ wr }: { wr: (number | null)[] }) {
+  const t = useT()
+  const vals = wr.filter((v): v is number => v != null)
+  if (vals.length < 3) return null
+  const span = Math.max(3, ...vals.map((v) => Math.abs(v - 50)))
+  const peak = wr.indexOf(Math.max(...vals))
+  return (
+    <Card className="p-4">
+      <Eyebrow right={<span className="text-[11.5px] text-mute">{t('power.peak')}: <span className="font-semibold text-gold">{TIME_BUCKETS[peak]} {t('power.min')}</span></span>}>
+        {t('power.title')}
+      </Eyebrow>
+      <div className="relative grid h-[104px] grid-cols-7 gap-2">
+        <span className="absolute inset-x-0 top-1/2 h-px bg-line" />
+        {wr.map((v, i) => {
+          const up = v != null && v >= 50
+          const h = v == null ? 0 : (Math.abs(v - 50) / span) * 34 // % of the cell; leaves room for the number
+          const edge = `calc(50% + ${h}% + 3px)`
+          return (
+            <div key={i} className="relative" title={v == null ? undefined : t('power.tip').replace('{t}', TIME_BUCKETS[i]).replace('{wr}', v.toFixed(1))}>
+              <span className={`absolute inset-x-1 rounded-sm transition-[height] duration-500 ${up ? 'bottom-1/2' : 'top-1/2'} ${i === peak ? 'bg-gold shadow-[0_0_12px_-2px_rgba(200,170,110,.7)]' : up ? 'bg-win/60' : 'bg-loss/60'}`} style={{ height: `${h}%` }} />
+              {v != null && <span className={`absolute inset-x-0 text-center text-[10.5px] font-bold ${i === peak ? 'text-gold' : wrColor(v)}`} style={up ? { bottom: edge } : { top: edge }}>{v.toFixed(1)}</span>}
+            </div>
+          )
+        })}
+      </div>
+      <div className="mt-1.5 grid grid-cols-7 gap-2 text-center text-[10.5px] text-mute">{TIME_BUCKETS.map((b) => <span key={b}>{b}</span>)}</div>
+    </Card>
   )
 }
 
@@ -134,6 +165,8 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
           ))}
         </div>
       </Card>
+
+      {build.timeWr && <PowerCurve wr={build.timeWr} />}
 
       <Card className="p-4">
         <Eyebrow

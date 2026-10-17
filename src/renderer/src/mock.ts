@@ -169,11 +169,13 @@ const REC: DraftRecommendation = {
   picks: [pick(103, 84, 'S', 52.9, 53.1, 301500), pick(134, 77, 'A+', 52.6, 51.2, 120400), pick(112, 74, 'S', 52.2, 50.4, 18600), pick(61, 69, 'C-', 50.3, 49.1, 241900), pick(7, 66, 'A+', 52.4, null, 40200), pick(84, 58, 'B+', 50.9, 47.6, 9800), pick(245, 55, 'A', 51.4, 50.2, 15200), pick(238, 52, 'A+', 51.2, null, 8800), pick(4, 49, 'B', 50.1, 49.0, 4100)]
 }
 
+const TURN_ENDS = Date.now() + 27_000 // mock countdown
+
 export function installMock() {
   let settings: Settings = {
     lang: null, tierOverride: null, source: 'lolalytics',
     autoImport: { runes: true, spells: true, items: true },
-    autoAccept: false, autoAcceptDelay: 2, flashOn: 'F', startWithWindows: false,
+    autoAccept: false, autoAcceptDelay: 2, turnAlert: true, flashOn: 'F', startWithWindows: false,
     watchlist: [103, 238, 157], spellPrefs: {}, runePrefs: {}, banHistory: { 157: 6, 238: 4, 84: 2 }
   }
   const listeners = new Set<(s: AppState) => void>()
@@ -192,8 +194,8 @@ export function installMock() {
       live,
       champSelect: cs
         ? h.includes('locked')
-          ? { championId: 245, lane: 'jungle', locked: true, imported: false, importing: true, importResult: { runes: 'ok', spells: 'ok' }, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: null, myTurn: false, phase: 'done' }
-          : { championId: picked || (h.includes('hover') ? 245 : 0), lane: 'jungle', locked: false, imported: false, importing: false, importResult: null, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: 8, myTurn: !ban, phase: ban ? 'ban' : 'pick' }
+          ? { championId: 245, lane: 'jungle', locked: true, imported: false, importing: true, importResult: { runes: 'ok', spells: 'ok' }, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: null, myTurn: false, phase: 'done', endsAt: null }
+          : { championId: picked || (h.includes('hover') ? 245 : 0), lane: 'jungle', locked: false, imported: false, importing: false, importResult: null, autoImportAllowed: true, spell1Id: spells[0], spell2Id: spells[1], pickActionId: 8, myTurn: !ban, phase: ban ? 'ban' : 'pick', endsAt: TURN_ENDS }
         : null,
       settings,
       lang: settings.lang ?? 'tr',
@@ -209,7 +211,7 @@ export function installMock() {
     riotReload: async () => ({ hasKey: true, valid: true, envPath: 'C:/lolay/.env' }),
     onState: (cb) => { listeners.add(cb); return () => { listeners.delete(cb) } },
     getStatic: () => loadStatic(state().lang),
-    getBuild: async (q) => { await new Promise((r) => setTimeout(r, 400)); return { ...ahri(q.lane ?? 'middle', settings.source), championId: q.championId, damage: DAMAGE[q.championId] ?? null } },
+    getBuild: async (q) => { await new Promise((r) => setTimeout(r, 400)); return { ...ahri(q.lane ?? 'middle', settings.source), championId: q.championId, damage: DAMAGE[q.championId] ?? null, timeWr: settings.source === 'lolalytics' ? [47.6, 50.4, 52.1, 53.3, 51.8, 49.2, 46.9].map((v) => +(v + (q.championId % 5) * 0.4).toFixed(1)) : undefined } },
     getRunePages: async (q) => {
       await new Promise((r) => setTimeout(r, 300))
       const runes = ahri(q.lane, settings.source).runes
