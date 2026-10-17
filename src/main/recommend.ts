@@ -1,4 +1,4 @@
-import type { BenchChamp, CounterPick, DraftBench, DraftChamp, DraftPick, DraftPool, Lane } from '../shared/types.ts'
+import type { BanPick, BanReason, BenchChamp, CounterPick, DraftBench, DraftChamp, DraftPick, DraftPool, Lane } from '../shared/types.ts'
 import type { CsSession } from './champSelect.ts'
 import type { Matchups, TierList, TierRow } from './tierlist.ts'
 
@@ -107,6 +107,36 @@ export function myBanChips(history: Record<number, number>, list: TierList, take
     const r = list[+id]
     return r ? chip(r, taken.has(+id)) : { ...none(+id), out: taken.has(+id) }
   })
+}
+
+export interface BanInput {
+  list: TierList
+  excluded: Set<number> // banned, picked, my own champion and what my teammates hover
+  history: Record<number, number> // my ban counts
+  vsMine?: Matchups | null // my champion's win rate against each enemy champion
+  limit: number
+}
+
+// Ban score = sum of three parts; the reasons (strongest first) are the parts that clearly apply
+//   threat: 8 per win-rate point below 50% that my champion has against it (clamped 0..8, 200+ games)
+//   lane:   5 per delta point (clamped 0..5) + 0.6 per pick-rate point (cap 15) + 0.6 per ban-rate point (cap 40)
+//   mine:   15 + 5 per earlier ban of it (cap 4)
+export function rankBans({ list, excluded, history, vsMine, limit }: BanInput): BanPick[] {
+  const ids = new Set([...Object.values(list).filter((r) => r.pctLane >= MIN_LANE_SHARE && r.tier).map((r) => r.championId), ...Object.keys(history).map(Number)])
+  const out: BanPick[] = []
+  for (const id of ids) {
+    if (excluded.has(id)) continue
+    const r = list[id]
+    const m = vsMine?.[id]
+    const threat = m && m.n >= MIN_COUNTER_GAMES ? 8 * clamp(50 - m.wr, 0, 8) : 0
+    const lane = r && r.pctLane >= MIN_LANE_SHARE && r.tier ? 5 * clamp(r.delta, 0, 5) + 0.6 * Math.min(r.pr, 15) + 0.6 * Math.min(r.br, 40) : 0
+    const mine = history[id] ? 15 + 5 * Math.min(history[id], 4) : 0
+    const parts: [BanReason, number][] = [['counter', threat], ['strong', lane], ['mine', mine]]
+    const reasons = parts.filter(([k, v]) => v >= (k === 'strong' ? 15 : 1)).sort((a, b) => b[1] - a[1]).map(([k]) => k)
+    if (!reasons.length) continue
+    out.push({ championId: id, score: Math.round(threat + lane + mine), reasons, tier: r?.tier ?? '', wr: r?.wr ?? 0, br: r?.br ?? 0, vs: m && m.n >= MIN_COUNTER_GAMES ? m.wr : null })
+  }
+  return out.sort((a, b) => b.score - a.score || b.br - a.br).slice(0, limit)
 }
 
 // favorite -> its win rate against the enemy laner (vsEnemy holds the enemy's win rate, so 100 - wr), enough games only

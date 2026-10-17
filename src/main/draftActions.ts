@@ -6,7 +6,7 @@ import type { CsSession } from './champSelect.ts'
 import { request } from './lcu.ts'
 import { toLane } from './liveRoster.ts'
 import { champPathSlug, slugFromDdragonId } from './lolalytics.ts'
-import { champPool, counterPicks, deriveBan, favoriteVs, favorites, findEnemies, myBanChips, rankBench, rankPicks, rateStrips } from './recommend.ts'
+import { champPool, counterPicks, deriveBan, favoriteVs, favorites, findEnemies, myBanChips, rankBans, rankBench, rankPicks, rateStrips } from './recommend.ts'
 import { getStatic } from './services.ts'
 import { updateSettings } from './settings.ts'
 import { itemAdvice } from './itemAdvice.ts'
@@ -132,7 +132,19 @@ export async function recommend(): Promise<DraftRecommendation | null> {
   const vsEnemy = enemy ? await getMatchups(champPathSlug(enemyId!) ?? slugFromDdragonId(enemy.id), lane, tier).catch(() => null) : null
 
   const favs = favorites(list, points, available, 8)
+  const ban = session ? deriveBan(session) : { banActionId: null, myBanTurn: false }
+
+  // ban suggestions: never what is taken, what I hover myself or what a teammate hovers / picks
+  const subject = cs.championId > 0 ? cs.championId : favs[0] ?? null
+  const mates = (session?.myTeam ?? []).filter((p: any) => p.cellId !== session.localPlayerCellId).flatMap((p: any) => [p.championId, p.championPickIntent])
+  const excluded = new Set<number>([...taken, ...mates.filter((n: number) => n > 0), ...(subject ? [subject] : [])])
+  const subjectChamp = subject ? st.champions[subject] : undefined
+  const vsMine = ban.banActionId != null && subjectChamp ? await getMatchups(champPathSlug(subject!) ?? slugFromDdragonId(subjectChamp.id), lane, tier).catch(() => null) : null
+  const banPicks = ban.banActionId != null ? rankBans({ list, excluded, history: getState().settings.banHistory, vsMine, limit: MAX_LIST }) : []
+
   return {
+    banPicks,
+    banVsId: vsMine ? subject : null,
     favorites: favs,
     favoriteVs: favoriteVs(favs, vsEnemy),
     myBans: myBanChips(getState().settings.banHistory, list, taken, 6),
@@ -141,7 +153,7 @@ export async function recommend(): Promise<DraftRecommendation | null> {
     enemyJungleId,
     counters: counterPicks(list, available, vsEnemy, MAX_LIST),
     ...rateStrips(list, available, taken, getState().settings.watchlist, 8),
-    ...(session ? deriveBan(session) : { banActionId: null, myBanTurn: false })
+    ...ban
   }
 }
 

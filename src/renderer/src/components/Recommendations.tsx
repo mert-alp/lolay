@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { champIcon, type DraftChamp, type DraftRecommendation, type StaticData } from '@shared/types'
-import { useLang, useT } from '../i18n'
+import { useLang, useT, type Key } from '../i18n'
 import { fmtGames, fmtPct, tierColor, toward, wrColor } from '../util'
 
 function ScoreRing({ score, size = 46 }: { score: number; size?: number }) {
@@ -103,12 +103,14 @@ interface Props {
   banning: boolean // my ban turn: clicking hovers a ban instead of a pick
   banSel: number
   onChoose: (id: number) => void // hover as a pick, or as a ban while `banning`
+  onBan: (id: number) => void // ban phase: hover and lock the ban in one step
 }
 
-export function Recommendations({ rec, loading, error, st, currentId, banning, banSel, onChoose }: Props) {
+export function Recommendations({ rec, loading, error, st, currentId, banning, banSel, onChoose, onBan }: Props) {
   const t = useT()
   const [allCounters, setAllCounters] = useState(false)
   const [allPicks, setAllPicks] = useState(false)
+  const [allBans, setAllBans] = useState(false)
   const lang = useLang()
   const sel = banning ? banSel : currentId
   const icon = (id: number) => {
@@ -117,21 +119,10 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
   }
   const enemy = rec?.enemyId ? icon(rec.enemyId) : null
 
-  const tile = (kind: 'watch' | 'popular' | 'banned') => (c: DraftChamp) => {
+  const tile = (kind: 'watch' | 'popular') => (c: DraftChamp) => {
     const ic = icon(c.championId)
     if (!ic) return null
     const rate = (label: string, v: number) => <><span className="text-[#6b7589]">{label}</span> {fmtPct(v)}</>
-    if (kind === 'banned') {
-      return (
-        <Tile
-          key={c.championId} src={ic.src} name={ic.c.name} tier={c.tier} dim={c.out} danger active={banSel === c.championId && !c.out}
-          title={c.out ? t('draft.banTaken') : banning ? t('draft.banHint') : ic.c.name}
-          onClick={banning && !c.out ? () => onChoose(c.championId) : undefined}
-        >
-          {c.none ? <span className="whitespace-normal text-[9px] leading-[11px]">{t('draft.noLaneData')}</span> : <span className={c.out ? '' : 'text-loss'}>{rate('BR', c.br)}</span>}
-        </Tile>
-      )
-    }
     return (
       <Tile key={c.championId} src={ic.src} name={ic.c.name} tier={c.none ? undefined : c.tier} dim={c.none} active={c.championId === sel} danger={banning} title={c.none ? `${ic.c.name} · ${t('draft.noLaneData')}` : ic.c.name} onClick={() => onChoose(c.championId)}>
         {c.none ? <span className="whitespace-normal text-[9px] leading-[11px]">{t('draft.noLaneData')}</span> : kind === 'watch' ? <span className={wrColor(c.wr)}>{fmtPct(c.wr)}</span> : <>{rate('PR', c.pr)}<br /><span className={wrColor(c.wr)}>{fmtPct(c.wr)}</span></>}
@@ -210,14 +201,68 @@ export function Recommendations({ rec, loading, error, st, currentId, banning, b
     </>
   )
 
-  if (banMode)
+  if (banMode) {
+    const bans = rec?.banPicks ?? []
+    const vsChamp = rec?.banVsId ? icon(rec.banVsId)?.c : undefined
+    const WHY = { counter: 'border-loss/40 bg-loss/10 text-loss', strong: 'border-gold/40 bg-gold/10 text-gold', mine: 'border-blue/40 bg-blue/10 text-blue' } as const
     return (
-      <div className="space-y-4">
-        <Strip title={t('draft.myBans')} items={rec?.myBans} empty={t('draft.myBansHint')} tile={tile('banned')} />
-        <Strip title={t('draft.mostBanned')} items={rec?.banned} tile={tile('banned')} />
-        {strips}
-      </div>
+      <section>
+        <div className="mb-2.5 flex min-h-7 items-center gap-3">
+          <h3 className={sectionTitle}>{t('draft.banSuggest')}</h3>
+          {loading && rec && <span className="size-3 animate-spin rounded-full border-2 border-loss/30 border-t-loss" />}
+        </div>
+        {error && !rec ? (
+          <p className="py-8 text-center text-[12.5px] text-mute">{t('draft.recErr')}</p>
+        ) : rec && bans.length === 0 ? (
+          <p className="py-8 text-center text-[12.5px] text-mute">{t('draft.banNoData')}</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2 md:grid-cols-3">
+            {(rec ? bans.slice(0, allBans ? undefined : FIRST) : Array.from({ length: FIRST }, () => null)).map((b, i) => {
+              const ic = b && icon(b.championId)
+              if (!b || !ic) return <div key={i} className="skeleton h-[124px]" />
+              const on = b.championId === banSel
+              const why = b.reasons[0]
+              return (
+                <div
+                  key={b.championId}
+                  className={`fade-up flex flex-col overflow-hidden rounded-xl border bg-[#12161d] transition-all duration-150 ${
+                    on ? 'border-loss bg-[#1c1216] shadow-[0_0_0_2px_rgba(239,68,68,.55),0_0_26px_-4px_rgba(239,68,68,.75)]' : 'border-line hover:border-loss/50'
+                  }`}
+                >
+                  <button onClick={() => onChoose(b.championId)} title={ic.c.name} className="no-drag flex min-w-0 flex-1 items-center gap-3 px-3 pt-2.5 pb-2 text-left">
+                    <div className="relative shrink-0">
+                      <img src={ic.src} alt="" draggable={false} className={`size-[52px] rounded-xl border ${on ? 'border-loss' : 'border-white/10'}`} />
+                      {b.tier && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded border bg-[#0b0e14] px-1 text-[9.5px] leading-[13px] font-extrabold" style={{ color: tierColor(b.tier), borderColor: tierColor(b.tier) + '77' }}>{b.tier}</span>}
+                    </div>
+                    <div className="min-w-0 flex-1 leading-tight">
+                      <div className="truncate text-[14px] font-bold">{ic.c.name}</div>
+                      <span
+                        title={b.vs != null && vsChamp ? t('draft.banCounterTip').replace('{name}', vsChamp.name).replace('{wr}', fmtPct(b.vs)) : undefined}
+                        className={`mt-1 inline-block max-w-full truncate rounded-md border px-1.5 py-px text-[10.5px] font-semibold ${WHY[why]}`}
+                      >
+                        {t(`draft.banWhy.${why}` as Key)}
+                      </span>
+                      <div className="mt-1 truncate text-[10.5px] text-mute">
+                        {b.tier ? <><span className="text-[#6b7589]">BR</span> <span className="text-loss">{fmtPct(b.br)}</span> · <span className="text-[#6b7589]">WR</span> <span className={wrColor(b.wr)}>{fmtPct(b.wr)}</span></> : t('draft.noLaneData')}
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => onBan(b.championId)}
+                    className="no-drag mx-2.5 mb-2.5 inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-[#f0545a] to-[#c02a31] text-[12.5px] font-bold text-white shadow-[0_6px_16px_-8px_rgba(239,68,68,.9)] transition-all duration-150 hover:brightness-110 active:scale-[.97]"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" /></svg>
+                    {t('draft.ban')}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {rec && <More n={bans.length} open={allBans} onToggle={() => setAllBans((v) => !v)} />}
+      </section>
     )
+  }
 
   return (
     <div className="space-y-4">

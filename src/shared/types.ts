@@ -362,7 +362,21 @@ export interface DraftBench {
   rerolls: number | null // null = no rerolls in this mode
 }
 
+// why a champion is worth banning: it beats my champion / it is strong in my lane / I ban it often
+export type BanReason = 'counter' | 'strong' | 'mine'
+export interface BanPick {
+  championId: number
+  score: number
+  reasons: BanReason[] // strongest first, never empty
+  tier: string // '' = no lane data
+  wr: number
+  br: number
+  vs: number | null // my champion's win rate against it, null = unknown
+}
+
 export interface DraftRecommendation {
+  banPicks: BanPick[] // best first, for the ban phase
+  banVsId: number | null // the champion the `counter` reasons are about (hovered, else my top favorite)
   favorites: number[] // my most played champions in this lane that I can pick now
   picks: DraftPick[] // best first
   enemyId: number | null // the likely enemy laner (as the jungler: the enemy jungler)
