@@ -246,7 +246,7 @@ export function installMock() {
       const it = (id: number, wr: number, n: number) => ({ id, wr, n })
       return {
         enemies: 4,
-        comp: { pct: { physical: 27, magic: 64, true: 9 }, cc: { avg: 2.3, high: [254] }, healers: [11] },
+        comp: { pct: { physical: 27, magic: 64, true: 9 }, cc: { total: 7.6, avg: 1.9, list: [{ championId: 254, sec: 2.05 }, { championId: 51, sec: 1.5 }, { championId: 157, sec: 2 }, { championId: 11, sec: 0 }].sort((a, b) => b.sec - a.sec) }, healers: [11] },
         rows: [
           { kind: 'mr' as const, items: [it(3102, 53.1, 8200), it(3111, 51.9, 6100), it(4401, 52.4, 1200)] },
           { kind: 'tenacity' as const, items: [it(3111, 51.9, 6100), it(3140, 50.2, 400)] },

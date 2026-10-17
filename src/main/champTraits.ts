@@ -2,49 +2,60 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { get } from './providers/http.ts'
 
-// Meraki's champion data (~13 MB, all abilities) has a 1..3 "control" rating per champion; only that map is kept, once per patch
-const URL = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json'
+// CommunityDragon has each champion's game data (~50 KB): every spell's values, e.g. StunDuration [1,1,1,1,1,1,1]
+const BIN = (slug: string) => `https://raw.communitydragon.org/latest/game/data/characters/${slug}/${slug}.bin.json`
 
-export function parseControl(j: any): Record<number, number> {
-  const out: Record<number, number> = {}
-  for (const c of Object.values<any>(j ?? {})) {
-    const v = c?.attributeRatings?.control
-    if (Number.isInteger(c?.id) && Number.isInteger(v)) out[c.id] = v
+const CC_VALUE = /(stun|root|snare|knock|airborne|charm|fear|flee|taunt|sleep|suppress|polymorph|berserk|silence|ground|^cc)\w*dur/i
+const PLAIN_DURATION = /^(r|q|w|e|enemycast)?duration$/i // a CC spell whose value has no CC word: Amumu RDuration, Lissandra EnemyCastDuration
+const IMMOBILIZING = 'Trait_ImmobilizingCCSpell'
+const UNKNOWN_CC = 1 // ponytail: a CC spell without any duration value (Nautilus Q) counts as 1 s; a closer number needs the tooltip text
+
+// Seconds of crowd control a champion's abilities can apply at max rank, one CC per ability (the longest).
+export function ccSeconds(bin: any): number {
+  const perAbility = new Map<string, number>()
+  for (const [path, v] of Object.entries<any>(bin ?? {})) {
+    const sp = v?.mSpell
+    if (!sp || /skin/i.test(path)) continue
+    const ability = path.split('/').slice(0, 4).join('/') // Characters/Leona/Spells/LeonaZenithBladeAbility
+    const max = (d: any) => Math.max(0, ...((d?.values ?? []) as number[]).slice(1, 6).filter((x) => Number.isFinite(x) && x < 10))
+    const values: any[] = sp.DataValues ?? []
+    let sec = Math.max(0, ...values.filter((d) => CC_VALUE.test(d?.name ?? '')).map(max))
+    if (!sec && (sp.mSpellTags ?? []).includes(IMMOBILIZING)) sec = Math.max(0, ...values.filter((d) => PLAIN_DURATION.test(d?.name ?? '')).map(max)) || UNKNOWN_CC
+    if (sec) perAbility.set(ability, Math.max(perAbility.get(ability) ?? 0, sec))
   }
-  return out
+  return +[...perAbility.values()].reduce((s, x) => s + x, 0).toFixed(2)
 }
 
+// champion id -> CC seconds, fetched per champion when first needed and kept per patch
 export function createTraits(opts: { cacheDir: string; patch: () => string | null }) {
   const file = join(opts.cacheDir, 'traits.json')
-  let mem: { patch: string; control: Record<number, number> } | null = null
-  let failed: string | null = null // patch whose download failed this session: no 13 MB retry on every call
-  let inflight: Promise<Record<number, number> | null> | null = null
+  let mem: { patch: string; cc: Record<number, number> } | null = null
+  const failed = new Set<number>() // not retried this session
 
-  async function load(patch: string): Promise<Record<number, number> | null> {
+  async function table(patch: string) {
+    if (mem?.patch === patch) return mem
     try {
       const disk = JSON.parse(await readFile(file, 'utf8'))
-      if (disk?.patch === patch) return (mem = disk).control
+      if (disk?.patch === patch && disk.cc) return (mem = disk as { patch: string; cc: Record<number, number> })
     } catch {}
-    if (failed === patch) return null
-    try {
-      const control = parseControl(await (await get(URL, { gap: 0 })).json())
-      if (!Object.keys(control).length) throw new Error('Meraki champions without control ratings')
-      mem = { patch, control }
-      await mkdir(opts.cacheDir, { recursive: true })
-      await writeFile(file, JSON.stringify(mem))
-      return control
-    } catch (e) {
-      console.error('champion traits', e)
-      failed = patch
-      return null
-    }
+    return (mem = { patch, cc: {} })
   }
 
-  // champion id -> control rating 1..3; null = unknown (the CC hint is left out)
-  return async function control(): Promise<Record<number, number> | null> {
-    const patch = opts.patch() ?? 'unknown'
-    if (mem?.patch === patch) return mem.control
-    inflight ??= load(patch).finally(() => (inflight = null))
-    return inflight
+  return async function cc(champs: { championId: number; slug: string }[]): Promise<Record<number, number>> {
+    const t = await table(opts.patch() ?? 'unknown')
+    const missing = champs.filter((c) => !(c.championId in t.cc) && !failed.has(c.championId))
+    await Promise.all(missing.map(async (c) => {
+      try {
+        t.cc[c.championId] = ccSeconds(await (await get(BIN(c.slug), { gap: 0 })).json())
+      } catch (e) {
+        console.error('champion cc', c.slug, e)
+        failed.add(c.championId)
+      }
+    }))
+    if (missing.length) {
+      await mkdir(opts.cacheDir, { recursive: true })
+      await writeFile(file, JSON.stringify(t)).catch(() => {})
+    }
+    return t.cc
   }
 }

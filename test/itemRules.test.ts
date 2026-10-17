@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildPath, enemyComp, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
-import { parseControl } from '../src/main/champTraits.ts'
+import { ccSeconds } from '../src/main/champTraits.ts'
 import type { StaticItem } from '../src/shared/types.ts'
 
 const item = (o: Partial<StaticItem> = {}): StaticItem => ({ name: 'x', gold: 3000, desc: '', final: true, ...o })
@@ -35,8 +35,8 @@ test('teamAdvice: heavy magic damage asks for MR the champion really buys, finis
 
 test('teamAdvice: crowd control and healing, components allowed for anti-heal; nothing without enemies', () => {
   const pool = [s(3111, 3000), s(3916, 700), s(3165, 600), s(3089, 9000)]
-  const comp = enemyComp([{ championId: 89, heal: 30000 }, { championId: 99, heal: 4000 }], { 89: 3, 99: 2 })
-  assert.deepEqual(comp.cc, { avg: 2.5, high: [89] })
+  const comp = enemyComp([{ championId: 99, heal: 4000 }, { championId: 89, heal: 30000 }], { 89: 3.25, 99: 1 })
+  assert.deepEqual(comp.cc, { total: 4.25, avg: 2.125, list: [{ championId: 89, sec: 3.25 }, { championId: 99, sec: 1 }] })
   assert.deepEqual(comp.healers, [89])
   const rows = teamAdvice(pool, items, comp)
   assert.deepEqual(rows.map((r) => [r.kind, r.items.map((i) => i.id)]), [['tenacity', [3111]], ['antiheal', [3916, 3165]]])
@@ -47,6 +47,17 @@ test('vsItems: finished items bought against the laner that the popular path lac
   assert.deepEqual(vsItems([s(3157, 400), s(3089, 900), s(1057, 600), s(3102, 20)], items, [3089]).map((i) => i.id), [3157])
 })
 
-test('parseControl: Meraki control rating by champion id', () => {
-  assert.deepEqual(parseControl({ Ahri: { id: 103, attributeRatings: { control: 2 } }, Broken: { id: 'x' } }), { 103: 2 })
+test('ccSeconds: the longest CC of each ability at max rank, skins left out', () => {
+  const spell = (values: Record<string, number[]>, tags: string[] = []) => ({ mSpell: { mSpellTags: tags, DataValues: Object.entries(values).map(([name, v]) => ({ name, values: v })) } })
+  const bin = {
+    'Characters/Leona/Spells/LeonaQAbility/LeonaQ': spell({ StunDuration: [1, 1, 1, 1, 1, 1, 1], BaseDamage: [10, 10, 35, 60, 85, 110, 135] }),
+    'Characters/Leona/Spells/LeonaEAbility/LeonaE': spell({ RootDuration: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] }),
+    'Characters/Leona/Spells/LeonaEAbility/LeonaERoot': spell({ RootDuration: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] }), // same ability: counted once
+    'Characters/Amumu/Spells/AmumuRAbility/AmumuR': spell({ RDuration: [1.5, 1.5, 1.5, 1.5] }, ['Trait_ImmobilizingCCSpell']),
+    'Characters/Naut/Spells/NautQAbility/NautQ': spell({ BaseDamage: [85, 85, 125] }, ['Trait_ImmobilizingCCSpell']), // CC without a duration: 1 s
+    'Characters/Leona/Spells/LeonaSkin34Manager/X': spell({ StunDuration: [5, 5, 5, 5, 5, 5, 5] }),
+    'Characters/Zed/Spells/ZedEAbility/ZedE': spell({ SlowDuration: [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5], MarkDuration: [3, 3, 3, 3, 3, 3, 3] })
+  }
+  assert.equal(ccSeconds(bin), 4) // 1 + 0.5 + 1.5 + 1
+  assert.equal(ccSeconds({}), 0)
 })

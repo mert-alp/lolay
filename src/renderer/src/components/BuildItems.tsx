@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { champIcon, type Build, type ItemStat, type StaticData } from '@shared/types'
-import { buildPath, HIGH_CC, ONE_SIDED, type AdviceKind, type ItemAdvice } from '@shared/itemRules'
+import { buildPath, HIGH_CC, MID_CC, ONE_SIDED, type AdviceKind, type ItemAdvice } from '@shared/itemRules'
 import { useLang, useT, type Key } from '../i18n'
 import { toward } from '../util'
 import { Card, Eyebrow } from './ui'
@@ -26,7 +26,8 @@ function Advice({ advice, st }: { advice: ItemAdvice | null; st: StaticData }) {
   if (!advice) return <div className="space-y-2"><div className="skeleton h-6 w-1/2" /><div className="skeleton h-[60px]" /></div>
   const { comp, rows, vs } = advice
   const names = (ids: number[]) => ids.map((id) => st.champions[id]?.name).filter(Boolean).join(', ')
-  const cc = comp.cc && (comp.cc.avg >= HIGH_CC ? 'adv.cc.high' : comp.cc.avg >= 1.7 ? 'adv.cc.mid' : 'adv.cc.low')
+  const cc = comp.cc && (comp.cc.avg >= HIGH_CC ? 'adv.cc.high' : comp.cc.avg >= MID_CC ? 'adv.cc.mid' : 'adv.cc.low')
+  const sec = (n: number) => `${n.toFixed(1)} ${t('draft.secs')}`
   const vsChamp = vs ? st.champions[vs.championId] : undefined
   const icons = (list: ItemStat[]) => <div className="flex flex-wrap gap-3">{list.map((i) => <ItemIcon key={i.id} id={i.id} st={st} size={36} wr={i.wr} n={i.n} />)}</div>
 
@@ -45,9 +46,22 @@ function Advice({ advice, st }: { advice: ItemAdvice | null; st: StaticData }) {
                   <Chip color={comp.pct.magic >= ONE_SIDED ? '#4aa3ff' : undefined}>AP {Math.round(comp.pct.magic)}%</Chip>
                 </>
               )}
-              {cc && <Chip color={cc === 'adv.cc.high' ? '#f0c35a' : undefined} title={comp.cc!.high.length ? names(comp.cc!.high) : undefined}>{t('adv.cc')}: {t(cc)}</Chip>}
+              {cc && <Chip color={cc === 'adv.cc.high' ? '#f0c35a' : undefined} title={t('adv.ccTip')}>{t('adv.cc')}: {sec(comp.cc!.total)} · {t(cc)}</Chip>}
               {comp.healers.length > 0 && <Chip color="#4fb6b0" title={names(comp.healers)}>{t('adv.heal')}: {names(comp.healers)}</Chip>}
             </div>
+            {comp.cc && comp.cc.list.some((e) => e.sec > 0) && (
+              <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
+                {comp.cc.list.filter((e) => e.sec > 0).map((e) => {
+                  const c = st.champions[e.championId]
+                  return c && (
+                    <span key={e.championId} className="inline-flex items-center gap-1.5 text-[11.5px]" title={c.name}>
+                      <img src={champIcon(st.version, c.id)} alt="" className="size-5 rounded" />
+                      <span className={`font-semibold ${e.sec >= 2.5 ? 'text-gold' : 'text-fg/90'}`}>{sec(e.sec)}</span>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
             {rows.length ? (
               <div className="space-y-3">
                 {rows.map((r) => (

@@ -3,7 +3,8 @@ import type { Build, Damage, ItemStat, StaticItem } from './types.ts'
 
 export const ONE_SIDED = 60 // % of one damage type in the enemy team: the team damage hint and MR / armor advice
 export const STRONG_HEAL = 15000 // Lolalytics average healing per game: Aatrox ~15k, Soraka / Vladimir ~28-30k, Zed ~4k
-export const HIGH_CC = 2.2 // average Meraki control rating (1..3) of the known enemies
+export const HIGH_CC = 1.8 // seconds of crowd control per known enemy (Leona 3.3, Ahri 1.8, Jinx 1.5, Zed 0)
+export const MID_CC = 1
 export const MIN_GAMES = 100 // an item this champion bought fewer times is no advice
 export const MIN_VS_GAMES = 50 // smaller sample on a /vs/ page
 const PER_ROW = 3
@@ -15,7 +16,7 @@ const CLEANSE = [3140] // Quicksilver Sash has no Tenacity tag
 export type AdviceKind = 'mr' | 'armor' | 'tenacity' | 'antiheal'
 export interface EnemyComp {
   pct: Damage | null // damage share of the known enemies
-  cc: { avg: number; high: number[] } | null // high = the enemies with the top control rating; null = no ratings
+  cc: { total: number; avg: number; list: { championId: number; sec: number }[] } | null // seconds of CC, longest first; null = unknown
   healers: number[] // enemies healing STRONG_HEAL or more per game
 }
 export interface AdviceRow {
@@ -31,11 +32,12 @@ export interface ItemAdvice {
   vs: { championId: number; items: ItemStat[] } | null // my laner (as the jungler: their jungler)
 }
 
-export function enemyComp(enemies: { championId: number; damage?: Damage | null; heal?: number }[], control: Record<number, number> | null): EnemyComp {
-  const rated = enemies.filter((e) => control?.[e.championId])
+export function enemyComp(enemies: { championId: number; damage?: Damage | null; heal?: number }[], cc: Record<number, number> | null): EnemyComp {
+  const list = enemies.filter((e) => cc?.[e.championId] != null).map((e) => ({ championId: e.championId, sec: cc![e.championId] })).sort((a, b) => b.sec - a.sec)
+  const total = +list.reduce((s, e) => s + e.sec, 0).toFixed(2)
   return {
     pct: teamDamage(enemies.map((e) => e.damage))?.pct ?? null,
-    cc: rated.length ? { avg: rated.reduce((s, e) => s + control![e.championId], 0) / rated.length, high: rated.filter((e) => control![e.championId] >= 3).map((e) => e.championId) } : null,
+    cc: list.length ? { total, avg: total / list.length, list } : null,
     healers: enemies.filter((e) => (e.heal ?? 0) >= STRONG_HEAL).map((e) => e.championId)
   }
 }
