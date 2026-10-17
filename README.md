@@ -1,6 +1,6 @@
 # Lolay
 
-Kişisel kullanım için League of Legends client yardımcısı (Electron). Blitz / OP.GG benzeri; build verisini varsayılan olarak **Lolalytics**'ten çeker.
+Kişisel kullanım için League of Legends client yardımcısı (Electron). Blitz / OP.GG benzeri, oyun içi overlay olmadan; build verisini varsayılan olarak **Lolalytics**'ten çeker.
 
 ## Özellikler
 
@@ -15,7 +15,6 @@ Kişisel kullanım için League of Legends client yardımcısı (Electron). Blit
 - **Şampiyon sayfası** – build, rün / eşya / spell açıklamaları (LoL tooltip'leri), counter'lar, lane ve rank filtresi
 - **Meta** – lane bazında tier listesi, yükselenler / düşenler, ★ takip listesi
 - **Maç** – canlı maç oyuncu kartları
-- **Oyun içi overlay** – skill puanın olduğunda hangi skill'i açacağını gösterir; jungle'da OP.GG'den şampiyona özel ilk rota. Oyunu **Borderless** veya Pencere modunda açmalısın (tam ekranda görünmez); Ayarlar'dan kapatılabilir
 - **Profil** – rank kartları, son maç istatistikleri, karşılaşma geçmişi + maç detayı, çok bölgeli oyuncu arama (Ctrl+K)
 - TR / EN arayüz, rank otomatik algılama, sistem tepsisinde çalışma, 380 px'den geniş ekranlara responsive tasarım
 

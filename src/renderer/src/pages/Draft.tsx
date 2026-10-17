@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { champIcon, DDRAGON, spellIcon, type AppState, type ApplyRequest, type Build, type Damage, type DraftPool, type DraftRecommendation, type LivePlayer, type StaticData } from '@shared/types'
+import { champIcon, DDRAGON, spellIcon, type AppState, type MetaResult, type MetaRow, type Tier, type ApplyRequest, type Build, type Damage, type DraftPool, type DraftRecommendation, type LivePlayer, type StaticData } from '@shared/types'
 import { damagePct, teamDamage } from '@shared/damage'
 import { useT, type Key } from '../i18n'
 import { RANK_TEXT, fmtGames, tagsOf, tierColor, wrColor } from '../util'
@@ -34,6 +34,24 @@ function useBuilds(wanted: { championId: number; lane?: LivePlayer['position'] }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig])
   return (id: number, lane?: string | null) => map[scope + bkey(id, lane)] ?? null
+}
+
+// ranked hides teammates, so a hidden ally gets the champion's own lane stats; one request per lane+tier
+const metaCache = new Map<string, Promise<MetaResult>>()
+function useChampMeta(championId: number, lane: LivePlayer['position'], tier: Tier, on: boolean) {
+  const [row, setRow] = useState<MetaRow | null | undefined>(undefined)
+  useEffect(() => {
+    if (!on) return
+    let live = true
+    const k = `${lane ?? 'all'}:${tier}`
+    let p = metaCache.get(k)
+    if (!p) metaCache.set(k, (p = window.lolay.getMeta({ lane: lane ?? 'all', tier, compare: false })))
+    setRow(undefined)
+    p.then((r) => live && setRow(r.rows.find((x) => x.championId === championId) ?? null))
+      .catch(() => { metaCache.delete(k); if (live) setRow(null) })
+    return () => { live = false }
+  }, [on, championId, lane, tier])
+  return row
 }
 
 function Silhouette() {
@@ -71,9 +89,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function AllyCard({ p, st, build }: { p: LivePlayer; st: StaticData | null; build: Build | null }) {
+function AllyCard({ p, st, build, tier: appTier }: { p: LivePlayer; st: StaticData | null; build: Build | null; tier: Tier }) {
   const t = useT()
   const champ = p.championId ? st?.champions[p.championId] : undefined
+  const cd = !!p.hidden && !p.bot && !!champ
+  const meta = useChampMeta(p.championId, p.position, appTier, cd)
   const s = p.summary
   const loading = !!p.puuid && !s
   const tier = s?.rank?.tier
@@ -164,6 +184,27 @@ function AllyCard({ p, st, build }: { p: LivePlayer; st: StaticData | null; buil
               <Row label="KDA">
                 {s.kda == null ? <span className="text-mute">–</span> : <span className={`font-bold ${kdaColor(s.kda)}`}>{s.kda.toFixed(2)}</span>}
               </Row>
+            </div>
+          )}
+
+          {cd && (
+            <div className="space-y-1 border-t border-white/10 pt-2">
+              <div className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mute">{t('draft.champData')}</div>
+              {meta === undefined ? (
+                <div className="space-y-2 pt-0.5"><Sk w="70%" h={12} /><Sk w="90%" h={10} /><Sk w="80%" h={10} /></div>
+              ) : meta === null ? (
+                <span className="text-[11.5px] text-mute">–</span>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5 leading-tight">
+                    {meta.tier && <span className="rounded-md border px-1.5 text-[11px] font-extrabold" style={{ color: tierColor(meta.tier), borderColor: tierColor(meta.tier) + '77', background: tierColor(meta.tier) + '1f' }}>{meta.tier}</span>}
+                    <span className={`text-[15px] font-bold ${wrColor(meta.wr)}`}>{meta.wr.toFixed(1)}%</span>
+                    <span className={`text-[10.5px] font-semibold ${meta.delta >= 0 ? 'text-win' : 'text-loss'}`}>{meta.delta >= 0 ? '+' : ''}{meta.delta.toFixed(1)}</span>
+                  </div>
+                  <Row label={t('draft.laneRank')}>{meta.rank ? `#${meta.rank}` : <span className="text-mute">–</span>}</Row>
+                  <Row label={t('draft.pickBan')}>{meta.pr.toFixed(1)}% <span className="text-mute">·</span> {meta.br.toFixed(1)}%</Row>
+                </>
+              )}
             </div>
           )}
 
@@ -544,7 +585,7 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
       </div>
 
       <div className="snap-row -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-3 px-3 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 min-[900px]:mx-0 min-[900px]:snap-none min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0">
-        {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} />)}
+        {allies.slice(0, 5).map((p) => <AllyCard key={p.key} p={p} st={st} build={allyBuild(p)} tier={state.tier} />)}
       </div>
 
       <div className="flex flex-wrap gap-2 sm:gap-3">

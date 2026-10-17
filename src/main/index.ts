@@ -8,7 +8,6 @@ import { applyBuild } from './apply.ts'
 import { registerDraftIpc } from './draftActions.ts'
 import { stopLcu } from './lcu.ts'
 import { onRiotReload } from './liveMatch.ts'
-import { destroyOverlay, initOverlay } from './overlay.ts'
 import { getMeta } from './meta.ts'
 import { registerProfileIpc } from './profileIpc.ts'
 import { readyCheckAction } from './readyCheck.ts'
@@ -177,7 +176,6 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     quitting = true
     stopLcu()
-    destroyOverlay()
   })
   app.on('window-all-closed', () => {}) // live in the tray
   void app.whenReady().then(() => {
@@ -185,7 +183,6 @@ if (!app.requestSingleInstanceLock()) {
     reloadKey()
     loadSettings()
     initState()
-    initOverlay()
     registerIpc()
     createWindow()
     createTray()

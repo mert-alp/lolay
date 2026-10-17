@@ -29,23 +29,3 @@ export function playerList(): Promise<ClientPlayer[] | null> {
     req.on('error', () => resolve(null))
   })
 }
-
-// any Live Client Data endpoint; null = not reachable (game still loading) or not JSON
-export function liveGet<T = any>(path: string): Promise<T | null> {
-  return new Promise((resolve) => {
-    const req = https.get({ host: '127.0.0.1', port: 2999, path, agent, timeout: 2000 }, (res) => {
-      const chunks: Buffer[] = []
-      res.on('data', (d) => chunks.push(d))
-      res.on('end', () => {
-        try {
-          resolve(res.statusCode === 200 ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : null)
-        } catch {
-          resolve(null)
-        }
-      })
-      res.on('error', () => resolve(null))
-    })
-    req.on('timeout', () => req.destroy())
-    req.on('error', () => resolve(null))
-  })
-}

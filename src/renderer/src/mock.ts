@@ -67,11 +67,13 @@ function liveState(cs: boolean): LiveMatchState {
   return { phase: cs ? 'ChampSelect' : 'InProgress', myTeam: my, enemyTeam: enemy, loading: true }
 }
 
-// champ select preview: me + 2 humans with summaries + 1 loading + 1 bot
+// champ select preview: me + 2 hidden allies (champion stats only) + 1 loading + 1 bot
 function csStrip(): LiveMatchState {
   const base = liveState(true)
   const bot = pl('bot1', 32, 'jungle', null, null, null, { puuid: null, bot: true })
-  return { ...base, myTeam: base.myTeam.map((p) => (p.key === 'a2' ? bot : p)), bans: { my: [4, 55, 91], their: [64, 7, 84, 99, 21] } }
+  const hid = (key: string, championId: number, position: Lane) => ({ ...pl(key, championId, position, null, null, null), puuid: null, hidden: true })
+  const swap: Record<string, LivePlayer> = { a2: bot, a1: hid('a1', 24, 'top'), a4: hid('a4', 18, 'bottom') }
+  return { ...base, myTeam: base.myTeam.map((p) => swap[p.key] ?? p), bans: { my: [4, 55, 91], their: [64, 7, 84, 99, 21] } }
 }
 
 const DAMAGE: Record<number, Damage> = {
@@ -172,7 +174,7 @@ export function installMock() {
     lang: null, tierOverride: null, source: 'lolalytics',
     autoImport: { runes: true, spells: true, items: true },
     autoAccept: false, autoAcceptDelay: 2, flashOn: 'F', startWithWindows: false,
-    watchlist: [103, 238, 157], spellPrefs: {}, runePrefs: {}, banHistory: { 157: 6, 238: 4, 84: 2 }, overlay: true, overlaySkill: true, overlayRoute: true, overlayMap: 280, overlayPos: {}
+    watchlist: [103, 238, 157], spellPrefs: {}, runePrefs: {}, banHistory: { 157: 6, 238: 4, 84: 2 }
   }
   const listeners = new Set<(s: AppState) => void>()
   let picked = 0 // champion hovered through the mock API
@@ -187,7 +189,6 @@ export function installMock() {
       summoner: h.includes('connected') || cs || live || h.includes('readycheck') ? { name: 'Schelter', iconId: 1, soloTier: 'EMERALD', soloDivision: 'IV' } : null,
       phase: h.includes('readycheck') ? 'ReadyCheck' : cs ? 'ChampSelect' : live ? live.phase : 'None',
       readyCheck: h.includes('readycheck') ? { playerResponse: 'None', timer: 2, autoAcceptAt: Date.now() + 3200, queue: 'Dereceli Tek/Çift', bgChampionId: 103 } : null,
-      overlay: h.includes('overlay') ? { championId: 64, skill: 'Q', route: ['RAPTORS', 'RED', 'KRUG', 'WOLVES', 'BLUE', 'GROMP'], side: 'BLUE', gameTime: 95 } : null,
       live,
       champSelect: cs
         ? h.includes('locked')
@@ -222,7 +223,6 @@ export function installMock() {
     setSettings: async (p) => { settings = { ...settings, ...p }; emit(); return settings },
     onBuildRefreshed: () => () => {},
     windowControl: () => {},
-    overlayMouse: () => {},
     draftRecommend: async () => { await new Promise((r) => setTimeout(r, 300)); return location.hash.includes('champselect-ban') ? { ...REC, banActionId: 3, myBanTurn: true } : REC },
     searchPlayers: mockSearch,
     profileGet: mockProfileGet,
