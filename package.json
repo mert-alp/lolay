@@ -2,7 +2,9 @@
   "name": "lolay",
   "version": "0.4.1",
   "private": true,
-  "description": "Kişisel LoL client companion (Lolalytics)",
+  "description": "Open-source League of Legends client companion (builds, runes, draft help)",
+  "license": "MIT",
+  "repository": "github:mert-alp/lolo",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {

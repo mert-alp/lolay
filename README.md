@@ -1,56 +1,70 @@
 # LoLo
 
-Kişisel kullanım için League of Legends client yardımcısı (Electron). Blitz / OP.GG benzeri, oyun içi overlay olmadan; build verisini varsayılan olarak **Lolalytics**'ten çeker.
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20LoLo-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/schelterhub)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/mert-alp/lolo)](../../releases/latest)
 
-## Özellikler
+An open-source League of Legends client companion for Windows (Electron). Similar to Blitz / OP.GG, but without an in-game overlay; build data comes from **Lolalytics** by default.
 
-- **Kabul ekranı** – maç bulununca pencere öne gelir; kuyruk adı ve geri sayımla Kabul (Enter) / Reddet (Esc), isteğe bağlı gecikmeli otomatik kabul. Client'tan kabul edilirse uygulamadaki ekran da kapanır.
-- **Draft ekranı** (champ select'te otomatik açılır)
-  - Ban fazında en çok banladığın şampiyonlar (uygulama banlarını kaydeder) ve lane'de en çok banlananlar
-  - Öneriler: kendi şampiyonların (rakip laner'a karşı WR ile), rakip laner'a karşı counter pick'ler, kişiselleştirilmiş öneriler, takip listesi, en çok oynanan / banlanan şampiyonlar
-  - Tüm şampiyonlar seçicisi: arama + lane filtresi, programdan **hover / kilitle / banla**
-  - Build sekmesi: rün sayfaları (en çok seçilen, en yüksek WR, keystone varyantları, "Ekko vs Vi" eşleşme sayfaları (şampiyon ikonlarıyla), pro oyuncu sayfaları), doğrudan tıklanarak düzenlenen rünler, D ⇄ F spell kontrolü, eşyalar, skill sırası
-  - Takım kartları (rank, WR, mastery, son maçlar, Autofill / OTP etiketleri), takım hasar dağılımı, banlar
-  - Seçimler champ select'te otomatik client'a uygulanır; Flash tuşu ve şampiyon/lane bazında rün & spell tercihleri hatırlanır
-- **Şampiyon sayfası** – build, rün / eşya / spell açıklamaları (LoL tooltip'leri), counter'lar, lane ve rank filtresi
-- **Meta** – lane bazında tier listesi, yükselenler / düşenler, ★ takip listesi
-- **Maç** – canlı maç oyuncu kartları
-- **Profil** – rank kartları, son maç istatistikleri, karşılaşma geçmişi + maç detayı, çok bölgeli oyuncu arama (Ctrl+K)
-- TR / EN arayüz, rank otomatik algılama, sistem tepsisinde çalışma, 380 px'den geniş ekranlara responsive tasarım
+## Features
 
-## Kurulum
+- **Accept screen** – the window comes to the front when a match is found; queue name and countdown with Accept (Enter) / Decline (Esc), optional delayed auto-accept. If you accept from the client, the screen in the app closes too.
+- **Draft screen** (opens automatically in champ select)
+  - In the ban phase: the champions you ban most (the app records your bans) and the most banned champions in your lane
+  - Suggestions: your own champions (with WR against the enemy laner), counter picks against the enemy laner, personalized suggestions, watchlist, most played / banned champions
+  - All-champions picker: search + lane filter, **hover / lock / ban** from the app
+  - Build tab: rune pages (most picked, highest WR, keystone variants, "Ekko vs Vi" matchup pages with champion icons, pro player pages), runes editable by clicking, D ⇄ F spell control, items, skill order
+  - Team cards (rank, WR, mastery, recent games, Autofill / OTP tags), team damage split, bans
+  - Picks are applied to the client automatically in champ select; your Flash key and per-champion/per-lane rune & spell preferences are remembered
+- **Champion page** – build, rune / item / spell descriptions (LoL tooltips), counters, lane and rank filters
+- **Meta** – tier list per lane, risers / fallers, ★ watchlist
+- **Match** – live match player cards
+- **Profile** – rank cards, recent match stats, encounter history + match details, multi-region player search (Ctrl+K)
+- TR / EN interface, automatic rank detection, runs in the system tray, responsive design from 380 px wide
 
-[Releases](../../releases) sayfasından `LoLo-Setup-x.y.z.exe` dosyasını indirip çalıştır.
-Windows "bilinmeyen yayıncı" uyarısı verirse **Ek bilgi → Yine de çalıştır** (uygulama imzasız).
-League client'ı aç, LoLo otomatik bağlanır. Ek ayar veya anahtar gerekmez.
+## Installation
 
-- ✕ butonu uygulamayı sistem tepsisine gönderir; çıkmak için tepsi ikonu → **Çıkış**.
-- Hata kaydı: `%APPDATA%\lolay\lolay.log`
+Download `LoLo-Setup-x.y.z.exe` from the [Releases](../../releases) page and run it.
+If Windows shows an "unknown publisher" warning, click **More info → Run anyway** (the app is unsigned).
+Open the League client and LoLo connects automatically. No extra setup or keys needed.
 
-## Veri kaynakları
+- The ✕ button sends the app to the system tray; to quit, use the tray icon → **Quit**.
+- Error log: `%APPDATA%\lolay\lolay.log`
 
-| Veri | Kaynak |
+## Data sources
+
+| Data | Source |
 |---|---|
-| Build, rün, eşya, skill, counter, tier listesi | Lolalytics (varsayılan) · OP.GG · U.GG · METAsrc – Ayarlar'dan seçilir |
-| Statik veri ve ikonlar | Riot Data Dragon, CommunityDragon |
-| Profil, arama, maç geçmişi | Blitz → OP.GG (yedek) |
-| Pro oyuncu rün sayfaları | Blitz ProBuilds |
-| Champ select, rank, aktarım | League client (LCU, yerel) |
+| Builds, runes, items, skills, counters, tier list | Lolalytics (default) · OP.GG · U.GG · METAsrc – selectable in Settings |
+| Static data and icons | Riot Data Dragon, CommunityDragon |
+| Profile, search, match history | Blitz → OP.GG (fallback) |
+| Pro player rune pages | Blitz ProBuilds |
+| Champ select, rank, import | League client (LCU, local) |
 
-Riot Games API istemcisi kodda mevcut ama **kapalı** (`src/main/riotService.ts` → `RIOT_ENABLED`): kişisel anahtar dağıtılan bir uygulamaya gömülemez ve ara sunucu yok.
+A Riot Games API client exists in the code but is **disabled** (`src/main/riotService.ts` → `RIOT_ENABLED`): a personal key can't be embedded in a distributed app, and there is no proxy server.
 
-Üçüncü parti sitelerin verileri resmi olmayan uç noktalardan okunur; kişisel kullanım içindir ve siteler değiştiğinde kırılabilir. LoLo, Riot Games ile bağlantılı değildir.
+Third-party site data is read from unofficial endpoints and may break when those sites change. LoLo isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties.
 
-## Geliştirme
+## Development
 
-Gereksinim: Node.js 22+
+Requirements: Node.js 22+
 
 ```bash
 npm install
-npm run dev        # geliştirme
-npm test           # node:test birim testleri
+npm run dev        # development
+npm test           # node:test unit tests
 npm run typecheck
-npm run dist       # dist/ altına Setup + portable exe
+npm run dist       # Setup + portable exe under dist/
 ```
 
-Yapı: `src/main` (Electron ana süreç: LCU, veri sağlayıcıları, aktarım), `src/preload`, `src/renderer` (React + Tailwind arayüz), `src/shared` (ortak tipler ve saf yardımcılar), `test` (testler ve fixture'lar).
+Structure: `src/main` (Electron main process: LCU, data providers, import), `src/preload`, `src/renderer` (React + Tailwind UI), `src/shared` (shared types and pure helpers), `test` (tests and fixtures).
+
+Contributions are welcome – open an issue or a pull request.
+
+## Support
+
+LoLo is free and open source. If it helps you climb, you can buy me a coffee on [Ko-fi](https://ko-fi.com/schelterhub). ☕
+
+## License
+
+[MIT](LICENSE)
