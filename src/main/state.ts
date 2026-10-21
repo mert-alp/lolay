@@ -28,7 +28,8 @@ export function initState() {
     lang: 'en',
     tier: 'all',
     dataVersion: null,
-    postGame: null
+    postGame: null,
+    update: null
   })
 }
 

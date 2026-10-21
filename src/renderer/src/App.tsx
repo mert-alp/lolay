@@ -6,6 +6,7 @@ import { TitleBar } from './components/TitleBar'
 import { Rail, type Page } from './components/Rail'
 import { ReadyCheck } from './components/ReadyCheck'
 import { Toasts, useToasts } from './components/Toasts'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { Button } from './components/ui'
 import { Home } from './pages/Home'
 import { Draft } from './pages/Draft'
@@ -104,6 +105,7 @@ export default function App() {
         </div>
         {state.readyCheck && <ReadyCheck rc={state.readyCheck} autoAccept={state.settings.autoAccept} />}
         <Toasts list={toasts} />
+        <UpdatePrompt update={state.update} />
       </div>
     </OpenProfileCtx></LangCtx>
   )

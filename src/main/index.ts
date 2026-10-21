@@ -14,6 +14,7 @@ import { readyCheckAction } from './readyCheck.ts'
 import { riotStatus } from './riotService.ts'
 import { builds, ddragon, getBuild, getRunePages, getStatic } from './services.ts'
 import { startSession } from './session.ts'
+import { installUpdate, startUpdater } from './updater.ts'
 import { loadSettings, startHidden, updateSettings } from './settings.ts'
 import { getState, initState, onState, setState } from './state.ts'
 import { getWindow, setWindow, showWindow } from './win.ts'
@@ -136,6 +137,10 @@ function registerIpc() {
   })
   registerDraftIpc()
   registerProfileIpc()
+  ipcMain.on(IPC.installUpdate, () => {
+    quitting = true
+    installUpdate()
+  })
   ipcMain.on(IPC.windowControl, (_e, action: 'minimize' | 'maximize' | 'hide') => {
     const w = getWindow()
     if (action === 'maximize') w?.isMaximized() ? w.unmaximize() : w?.maximize() // toggle
@@ -189,5 +194,6 @@ if (!app.requestSingleInstanceLock()) {
     startSession()
     void checkData()
     setInterval(checkData, DATA_CHECK_MS)
+    startUpdater()
   })
 }

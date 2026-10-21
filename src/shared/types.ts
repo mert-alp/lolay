@@ -302,6 +302,7 @@ export interface AppState {
   tier: Tier // effective Lolalytics tier
   dataVersion: string | null // ddragon version
   postGame: PostGame | null // the game that just ended, from its end until the next champ select
+  update: { version: string; ready: boolean } | null // a newer LoLo on GitHub: downloading, or ready to install
 }
 
 // the end-of-game screen: Blitz's copy of the match, the League client's until Blitz has it
@@ -537,6 +538,7 @@ export interface LolayApi {
   readyCheck(action: 'accept' | 'decline' | 'cancelAuto'): Promise<void>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   windowControl(action: 'minimize' | 'maximize' | 'hide'): void
+  installUpdate(): void
   draftRecommend(): Promise<DraftRecommendation | null> // null = not in champ select / no lane
   searchPlayers(q: SearchQuery): Promise<SearchResponse>
   profileGet(q: 'me' | ProfileQuery): Promise<ProfileResult<Profile>>
@@ -567,6 +569,7 @@ export const IPC = {
   readyCheck: 'readycheck:action',
   setSettings: 'settings:set',
   windowControl: 'window:control',
+  installUpdate: 'update:install',
   riotStatus: 'riot:status',
   riotReload: 'riot:reload',
   draftRecommend: 'draft:recommend',

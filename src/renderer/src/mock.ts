@@ -200,6 +200,7 @@ export function installMock() {
       summoner: h.includes('connected') || cs || live || h.includes('readycheck') ? { name: 'Schelter', iconId: 1, soloTier: 'EMERALD', soloDivision: 'IV' } : null,
       phase: h.includes('readycheck') ? 'ReadyCheck' : cs ? 'ChampSelect' : live ? live.phase : h.includes('postgame') ? 'EndOfGame' : 'None',
       postGame: h.includes('postgame') ? postGame : null,
+      update: h.includes('update') ? { version: '0.4.5', ready: true } : null,
       readyCheck: h.includes('readycheck') ? { playerResponse: 'None', timer: 2, autoAcceptAt: Date.now() + 3200, queue: 'Dereceli Tek/Çift', bgChampionId: 103 } : null,
       live,
       champSelect: cs
@@ -237,6 +238,7 @@ export function installMock() {
     setSettings: async (p) => { settings = { ...settings, ...p }; emit(); return settings },
     onBuildRefreshed: () => () => {},
     windowControl: () => {},
+    installUpdate: () => {},
     draftRecommend: async () => { await new Promise((r) => setTimeout(r, 300)); return location.hash.includes('champselect-ban') ? { ...REC, banActionId: 3, myBanTurn: true } : REC },
     searchPlayers: mockSearch,
     profileGet: mockProfileGet,

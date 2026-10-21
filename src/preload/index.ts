@@ -22,6 +22,7 @@ const api: LolayApi = {
   riotStatus: () => ipcRenderer.invoke(IPC.riotStatus),
   riotReload: () => ipcRenderer.invoke(IPC.riotReload),
   windowControl: (action) => ipcRenderer.send(IPC.windowControl, action),
+  installUpdate: () => ipcRenderer.send(IPC.installUpdate),
   draftRecommend: () => ipcRenderer.invoke(IPC.draftRecommend),
   searchPlayers: (q) => ipcRenderer.invoke(IPC.searchPlayers, q),
   profileGet: (q) => ipcRenderer.invoke(IPC.profileGet, q),

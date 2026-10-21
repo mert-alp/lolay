@@ -1,6 +1,6 @@
 {
   "name": "lolay",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "private": true,
   "description": "Open-source League of Legends client companion (builds, runes, draft help)",
   "license": "MIT",
@@ -20,6 +20,11 @@
     "productName": "LoLo",
     "directories": {
       "output": "dist"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "mert-alp",
+      "repo": "lolo"
     },
     "files": [
       "out/**",
@@ -47,6 +52,7 @@
     }
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "node-html-parser": "^9.0.4",
     "ws": "^8.22.0"
   },
