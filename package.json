@@ -1,6 +1,6 @@
 {
   "name": "lolay",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "description": "Open-source League of Legends client companion (builds, runes, draft help)",
   "license": "MIT",

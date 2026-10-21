@@ -7,6 +7,8 @@ export function fmtGames(n: number): string {
   return String(n)
 }
 export { toward } from '@shared/text'
+// Riot names patches by year since 2026 (Data Dragon 16.20.1 = patch 26.20); older or already-renamed versions pass through
+export const gamePatch = (v: string) => v.replace(/^(1[6-9])\.(\d+)(\.\d+)*$/, (_, major, minor) => `${+major + 10}.${minor}`)
 export const fmtPct = (n: number | null | undefined) => (n == null ? '–' : `${n.toFixed(1)}%`)
 export const wrColor = (wr: number | null | undefined) => (wr == null ? 'text-fg' : wr > 50.05 ? 'text-win' : wr < 49.95 ? 'text-loss' : 'text-fg')
 

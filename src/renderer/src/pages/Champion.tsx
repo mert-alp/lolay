@@ -4,7 +4,7 @@ import {
   type AppState, type ApplyRequest, type Build, type Lane, type Matchup, type StaticData
 } from '@shared/types'
 import { useT } from '../i18n'
-import { SOURCE_NAME, fmtGames, fmtPct, tierColor as tierColorOf, wrColor } from '../util'
+import { SOURCE_NAME, fmtGames, fmtPct, gamePatch, tierColor as tierColorOf, wrColor } from '../util'
 import { Button, Card, Eyebrow, Segmented } from '../components/ui'
 import { prefKey } from '@shared/prefs'
 import { RuneSection, saveRunePref } from '../components/RunePageCard'
@@ -179,7 +179,7 @@ export function Champion({ state, st, champId, followLane, onPick, onHome, toast
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               {data && (
                 <span className="rounded-full border border-line bg-white/5 px-2.5 py-0.5 text-[12px] font-medium text-mute">
-                  {SOURCE_NAME[data.source]}{data.patch && ` · ${data.patch}`}
+                  {SOURCE_NAME[data.source]}{data.patch && ` · ${gamePatch(data.patch)}`}
                 </span>
               )}
               {age > BUILD_TTL && <span className="text-[12px] text-mute">{t('stale').replace('{h}', String(Math.floor(age / 3.6e6)))}</span>}

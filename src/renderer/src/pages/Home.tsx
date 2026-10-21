@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { champIcon, type AppState, type StaticData } from '@shared/types'
 import { useLang, useT, type Key } from '../i18n'
-import { fold, sortLocale } from '../util'
+import { fold, gamePatch, sortLocale } from '../util'
 import { Card } from '../components/ui'
 
 export function Home({ state, st, onPick }: { state: AppState; st: StaticData | null; onPick: (id: number) => void }) {
@@ -28,7 +28,7 @@ export function Home({ state, st, onPick }: { state: AppState; st: StaticData | 
           {on ? t('conn.on') : t('conn.off')}
         </Stat>
         <Stat label={t('home.phase')}>{phase}</Stat>
-        <Stat label={t('home.patch')}>{state.dataVersion ?? '–'}</Stat>
+        <Stat label={t('home.patch')}>{state.dataVersion ? gamePatch(state.dataVersion) : '–'}</Stat>
       </Card>
 
       <div className="group relative mb-4 sm:mb-5">

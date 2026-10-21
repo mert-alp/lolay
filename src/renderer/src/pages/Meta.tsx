@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { champIcon, LANES, type AppState, type Lane, type MetaResult, type MetaRow, type StaticData } from '@shared/types'
 import { useLang, useT, type Key } from '../i18n'
-import { TIER_BADGE, fmtGames, fmtPct, fold, sortLocale, tierName } from '../util'
+import { TIER_BADGE, fmtGames, fmtPct, fold, gamePatch, sortLocale, tierName } from '../util'
 import { Button, Card, Segmented } from '../components/ui'
 import { Crest } from '../components/TierSelect'
 
@@ -215,8 +215,9 @@ export function Meta({ state, st, onPick }: Props) {
   }, [data, st, q, sort, lang, nameOf])
 
   const byId = useMemo(() => new Map(data?.rows.map((r) => [r.championId, r])), [data])
-  const patch = data?.patch ?? null
-  const prevLabel = data?.previousPatch ? `${t('meta.vs')} ${data.previousPatch}` : ''
+  const patch = data?.patch ? gamePatch(data.patch) : null
+  const prevPatch = data?.previousPatch ? gamePatch(data.previousPatch) : null
+  const prevLabel = prevPatch ? `${t('meta.vs')} ${prevPatch}` : ''
   const laneLabel = (l: Lane) => t(`lane.${l}`)
 
   const onSort = (k: SortKey) =>
@@ -240,7 +241,7 @@ export function Meta({ state, st, onPick }: Props) {
               {tierName(tier, t('tier.all'))}
             </span>
             {patch && <span>{t('stat.patch')} <b className="font-semibold text-fg/90">{patch}</b></span>}
-            {data?.previousPatch && <span className="text-[#6b7589]">· {t('meta.vs')} {data.previousPatch}</span>}
+            {prevPatch && <span className="text-[#6b7589]">· {t('meta.vs')} {prevPatch}</span>}
           </div>
         </div>
         <div className="group relative w-full min-w-0 sm:w-[260px] sm:shrink-0">
@@ -281,7 +282,7 @@ export function Meta({ state, st, onPick }: Props) {
                   <div className="mb-1.5 flex items-center gap-2 px-1">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={up ? '#22c55e' : '#ef4444'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={up ? '' : 'scale-y-[-1]'} aria-hidden><path d="m2.5 11 4-4 2.5 2.5 4.5-5M10 4.5h3.5V8" /></svg>
                     <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mute">{title}</h3>
-                    <span className="ml-auto text-[10.5px] text-[#6b7589]">{kind === 'patch' ? `${data?.previousPatch} → ${patch}` : ''}</span>
+                    <span className="ml-auto text-[10.5px] text-[#6b7589]">{kind === 'patch' ? `${prevPatch} → ${patch}` : ''}</span>
                   </div>
                   {loading || !st ? (
                     <div className="grid grid-cols-5 gap-2 rounded-lg bg-[#0f1218] p-1.5">{Array.from({ length: 5 }, (_, i) => <div key={i} className="skeleton h-[96px]" />)}</div>
