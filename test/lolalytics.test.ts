@@ -4,7 +4,7 @@ import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mock, test } from 'node:test'
-import { champPathSlug, createLolalytics, parseQwik, slugFromDdragonId, timeWr, toBuild } from '../src/main/lolalytics.ts'
+import { champPathSlug, createLolalytics, parseQwik, slugFromDdragonId, toBuild } from '../src/main/lolalytics.ts'
 import { InsufficientDataError } from '../src/main/providers/http.ts'
 
 const html = readFileSync(new URL('./fixtures/ahri.html', import.meta.url), 'utf8')
@@ -145,14 +145,6 @@ test('provider: when both fail the page error is kept as cause', async () => {
   } finally {
     errors.mock.restore()
   }
-})
-
-test('timeWr: win rate per game length bucket, null without games', () => {
-  assert.deepEqual(timeWr({ time: { 1: 200, 2: 0, 7: 50 }, timeWin: { 1: 110, 7: 20 } }), [55, null, null, null, null, null, 40])
-  assert.equal(timeWr(undefined), undefined)
-  const wr = toBuild(parsed.data, 'emerald_plus').timeWr!
-  assert.equal(wr.length, 7)
-  assert.ok(wr.every((v) => v != null && v > 30 && v < 70))
 })
 
 test('toBuild keeps the champion item list and average healing for item advice', () => {

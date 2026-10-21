@@ -46,6 +46,11 @@ export interface SetStat extends Stat {
 export interface Matchup extends Stat {
   championId: number // wr = OUR champion's win rate against this one
 }
+// one matchup opened up (Lolalytics /vs/ page): the rune pages and finished items played against that enemy
+export interface MatchupDetail {
+  pages: RunePage[]
+  items: ItemStat[]
+}
 
 export interface Damage {
   physical: number
@@ -85,7 +90,6 @@ export interface Build {
   queue?: 'aram' // an ARAM build: `lane` means nothing then
   items?: ItemStat[] // Lolalytics only: every item this champion builds, for item advice
   heal?: number // Lolalytics only: average healing per game
-  timeWr?: (number | null)[] // Lolalytics only: win rate per game length, TIME_BUCKETS minutes; null = no games
   insufficient?: true // the source has too little data for this champion/lane/rank; every list is empty
   fetchedAt: number
 }
@@ -98,7 +102,6 @@ export interface RunePagesQuery {
   vsJungler?: number // enemy jungler (ignored when we play jungle: pass the enemy jungler as vsLaner)
 }
 
-export const TIME_BUCKETS = ['0-15', '15-20', '20-25', '25-30', '30-35', '35-40', '40+'] // Lolalytics' own labels
 
 export interface BuildQuery {
   championId: number
@@ -548,6 +551,7 @@ export interface LolayApi {
   draftBenchSwap(championId: number): Promise<boolean>
   draftReroll(): Promise<boolean>
   draftItemAdvice(championId: number, lane: Lane): Promise<ItemAdvice | null> // null = not in a Rift champ select
+  matchupDetail(championId: number, lane: Lane, vsId: number): Promise<MatchupDetail>
   queueNames(): Promise<Record<number, string>> // the client's own queue names, {} without the client
 }
 
@@ -579,5 +583,6 @@ export const IPC = {
   draftBench: 'draft:bench',
   draftBenchSwap: 'draft:benchSwap',
   draftReroll: 'draft:reroll',
-  draftItemAdvice: 'draft:itemAdvice'
+  draftItemAdvice: 'draft:itemAdvice',
+  matchupDetail: 'build:matchup'
 } as const

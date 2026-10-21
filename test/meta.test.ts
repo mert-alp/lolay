@@ -65,6 +65,21 @@ test('getMeta walks back to the newest patch Lolalytics has, then compares with 
   assert.equal(r.movers.kind, 'patch')
 })
 
+test('getMeta skips a patch a day old (a sliver of the games) and shows the one before', async () => {
+  const tiny = Object.fromEntries(Object.entries(cur).map(([id, r]) => [id, { ...r, games: Math.round(r.games / 100) }]))
+  const calls: (string | undefined)[] = []
+  const meta = createMeta(async (_l, _t, patch) => (calls.push(patch), patch === '16.21' ? tiny : patch === '16.19' ? prev : cur))
+  const r = await meta({ lane: 'all', tier: 'emerald_plus' }, '16.21.1')
+  assert.deepEqual(calls, ['16.21', '16.20', '16.20', '16.19'])
+  assert.equal(r.patch, '16.20')
+  assert.equal(r.previousPatch, '16.19')
+})
+
+test('findMovers leaves out champions rarely played in the lane', () => {
+  const row = (championId: number, pctLane: number) => ({ ...cur[103], championId, rank: 1, pr: 5, games: 5000, pctLane, dWr: 1.5, dPr: 0 })
+  assert.deepEqual(findMovers([row(1, 60), row(2, 3)]).up, [1])
+})
+
 test('getMeta without a previous patch still answers', async () => {
   const { meta } = fake([], ['16.19'])
   const r = await meta({ lane: 'top', tier: 'all' }, '16.20.1')

@@ -1,9 +1,9 @@
 import { join } from 'node:path'
 import { app } from 'electron'
 import { buildPath, enemyComp, teamAdvice, vsItems, type ItemAdvice } from '../shared/itemRules.ts'
-import type { Lane } from '../shared/types.ts'
+import type { Lane, MatchupDetail } from '../shared/types.ts'
 import { createTraits } from './champTraits.ts'
-import { champPathSlug, fetchMatchupItems, slugFromDdragonId } from './lolalytics.ts'
+import { champPathSlug, fetchMatchupItems, fetchMatchupPages, slugFromDdragonId } from './lolalytics.ts'
 import { findEnemies } from './recommend.ts'
 import { ddragon, getBuild, getStatic } from './services.ts'
 import { getState } from './state.ts'
@@ -36,4 +36,13 @@ export async function itemAdvice(championId: number, lane: Lane): Promise<ItemAd
   const slug = (id: number) => champPathSlug(id) ?? slugFromDdragonId(st.champions[id]?.id ?? '')
   const vsList = vsId && st.champions[vsId] ? await fetchMatchupItems({ slug: slug(championId), vsSlug: slug(vsId), lane, vsLane: lane, tier }).catch(() => []) : []
   return { enemies: theirs.length, comp, rows: teamAdvice(pool, st.items, comp), vs: vsId ? { championId: vsId, items: vsItems(vsList, st.items, path) } : null }
+}
+
+// one matchup opened from the matchup list: what is played against this enemy in this lane
+export async function matchupDetail(championId: number, lane: Lane, vsId: number): Promise<MatchupDetail> {
+  const st = await getStatic()
+  const slug = (id: number) => champPathSlug(id) ?? slugFromDdragonId(st.champions[id]?.id ?? '')
+  const q = { slug: slug(championId), vsSlug: slug(vsId), lane, vsLane: lane, tier: getState().tier }
+  const [pages, items] = await Promise.all([fetchMatchupPages(q), fetchMatchupItems(q)])
+  return { pages: pages.map((p) => ({ ...p, vs: vsId })), items: vsItems(items, st.items, [], 6) }
 }

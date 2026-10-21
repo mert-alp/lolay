@@ -8,6 +8,8 @@ const MIN_GAMES = 300 // both patches, else a win-rate change is noise
 const MIN_PR = 1
 const TOP_N = 5
 const MIN_MOVE = 0.5 // momentum below this is patch noise, not a trend
+const MIN_LANE = 10 // % of the champion's games in this lane: off-role picks (Swain jungle) are no lane trend
+const YOUNG = 0.2 // a patch with under 20% of the games of the one before is a day old: its changes are noise
 
 // the API answers 200 {"status":404} for a patch it has no data for
 export class PatchMissing extends Error {}
@@ -27,7 +29,8 @@ export function previousPatch(patch: string): string | null {
   return m && +m[2] > 1 ? `${m[1]}.${+m[2] - 1}` : null
 }
 
-const eligible = (r: MetaRow) => r.rank > 0 && r.pr >= MIN_PR && r.games >= MIN_GAMES
+const eligible = (r: MetaRow) => r.rank > 0 && r.pr >= MIN_PR && r.games >= MIN_GAMES && r.pctLane >= MIN_LANE
+const totalGames = (l: TierList) => Object.values(l).reduce((s, r) => s + r.games, 0)
 
 export function mergeChanges(cur: TierList, prev?: TierList): MetaRow[] {
   return Object.values(cur)
@@ -58,26 +61,34 @@ export function createMeta(fetchList: ListFetcher) {
   return async ({ lane, tier, compare = true }: MetaQuery, version: string | null): Promise<MetaResult> => {
     let patch: string | null = null
     let cur: TierList | undefined
+    let prev: TierList | undefined
+    let previousPatchLabel: string | null = null
     for (const c of patchCandidates(version)) {
+      let list: TierList
       try {
-        cur = await fetchList(lane, tier, c)
-        patch = c
-        break
+        list = await fetchList(lane, tier, c)
       } catch (e) {
         if (!(e instanceof PatchMissing)) throw e
+        continue
       }
+      const pp = previousPatch(c)
+      let before: TierList | undefined
+      if (pp) {
+        try {
+          before = await fetchList(lane, tier, pp)
+        } catch {} // the strips fall back to the lane-average delta
+      }
+      if (before && totalGames(list) < YOUNG * totalGames(before)) continue // too new: show the patch before
+      cur = list
+      patch = c
+      if (before && compare) {
+        prev = before
+        previousPatchLabel = pp
+      }
+      break
     }
     cur ??= await fetchList(lane, tier)
 
-    let previousPatchLabel: string | null = null
-    let prev: TierList | undefined
-    const pp = patch && compare ? previousPatch(patch) : null
-    if (pp) {
-      try {
-        prev = await fetchList(lane, tier, pp)
-        previousPatchLabel = pp
-      } catch {} // the strips fall back to the lane-average delta
-    }
     const rows = mergeChanges(cur, prev)
     return { patch, previousPatch: previousPatchLabel, rows, movers: findMovers(rows) }
   }

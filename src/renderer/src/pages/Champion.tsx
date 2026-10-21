@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   champIcon, BUILD_TTL, DDRAGON, LANES,
-  type AppState, type ApplyRequest, type Build, type Lane, type Matchup, type StaticData
+  type AppState, type ApplyRequest, type Build, type Lane, type StaticData
 } from '@shared/types'
 import { useT } from '../i18n'
 import { SOURCE_NAME, fmtGames, fmtPct, gamePatch, tierColor as tierColorOf, wrColor } from '../util'
@@ -9,7 +9,7 @@ import { Button, Card, Eyebrow, Segmented } from '../components/ui'
 import { prefKey } from '@shared/prefs'
 import { RuneSection, saveRunePref } from '../components/RunePageCard'
 import { BuildItems, useItemAdvice } from '../components/BuildItems'
-import { SkillOrder } from '../components/SkillOrder'
+import { Matchups } from '../components/Matchups'
 import { SpellControl } from '../components/SpellPicker'
 import { ImportRow } from '../components/ImportRow'
 import type { PushToast } from '../components/Toasts'
@@ -258,20 +258,11 @@ export function Champion({ state, st, champId, followLane, onPick, onHome, toast
               <Eyebrow>{t('spells.title')}</Eyebrow>
               <SpellControl pairs={fresh.spells} st={st} settings={state.settings} cs={following ? cs : null} championId={fresh.championId} toast={toast} saved={state.settings.spellPrefs[prefKey(fresh.championId, fresh.lane) ?? '']} />
             </Card>
-            <Card className="p-4">
-              <SkillOrder order={fresh.skillOrder} priority={fresh.skillPriority} />
-            </Card>
           </div>
 
           <BuildItems build={fresh} st={st} advice={adviseOn ? advice : undefined} action={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined} />
 
-          <Card className="p-4">
-            <Eyebrow>{t('counters.title')}</Eyebrow>
-            <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))]">
-              <CounterList title={t('counters.strong')} list={fresh.counters.strong} st={st} onPick={onPick} />
-              <CounterList title={t('counters.weak')} list={fresh.counters.weak} st={st} onPick={onPick} />
-            </div>
-          </Card>
+          <Matchups build={fresh} st={st} enemyId={following ? state.live?.enemyTeam.find((p) => p.position && p.position === fresh.lane)?.championId : undefined} onPick={onPick} onApply={following ? (perks) => apply({ perks }, 'runes') : undefined} />
         </div>
       )}
     </div>
@@ -283,29 +274,6 @@ function Stat({ label, value, cls = '', big }: { label: string; value: string; c
     <div className="text-right">
       <div className={`font-bold leading-none ${big ? 'text-[26px]' : 'text-[20px]'} ${cls}`}>{value}</div>
       <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-mute">{label}</div>
-    </div>
-  )
-}
-
-function CounterList({ title, list, st, onPick }: { title: string; list: Matchup[]; st: StaticData; onPick: (id: number) => void }) {
-  const t = useT()
-  return (
-    <div>
-      <div className="mb-2 text-[12px] font-semibold text-fg">{title}</div>
-      <div className="space-y-1">
-        {list.map((m) => {
-          const c = st.champions[m.championId]
-          if (!c) return null
-          return (
-            <button key={m.championId} onClick={() => onPick(m.championId)} className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 hover:bg-card2">
-              <img src={champIcon(st.version, c.id)} alt="" width={34} height={34} loading="lazy" decoding="async" style={{ width: 34, height: 34 }} className="rounded-lg border border-line" />
-              <span className="flex-1 truncate text-[13px] font-medium">{c.name}</span>
-              <span className={`text-[13px] font-bold ${wrColor(m.wr)}`}>{fmtPct(m.wr)}</span>
-              <span className="w-16 text-right text-[11px] text-mute">{fmtGames(m.n)} {t('counters.games')}</span>
-            </button>
-          )
-        })}
-      </div>
     </div>
   )
 }

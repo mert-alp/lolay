@@ -366,7 +366,16 @@ export function Draft({ state, st, onDetails, toast }: { state: AppState; st: St
     setBanSel(id)
     if (!(await ban(id, false))) setBanSel(0)
   }
-  const choose = (id: number) => (banView ? hoverBan(id) : pick(id))
+  // a click on my turn is final, like the client's own lock / ban button; before my turn it only hovers
+  async function choose(id: number) {
+    if (banning) return void (await act(id))
+    if (banView) return hoverBan(id)
+    if (phase === 'pick' && cs?.pickActionId != null && !cs.locked) {
+      await lock(id)
+      return setTab(toBuild)
+    }
+    return pick(id)
+  }
   async function swap(id: number) {
     try {
       if (await window.lolay.draftBenchSwap(id)) return

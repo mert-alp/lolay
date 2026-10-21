@@ -223,7 +223,7 @@ export function installMock() {
     riotReload: async () => ({ hasKey: true, valid: true, envPath: 'C:/lolay/.env' }),
     onState: (cb) => { listeners.add(cb); return () => { listeners.delete(cb) } },
     getStatic: () => loadStatic(state().lang),
-    getBuild: async (q) => { await new Promise((r) => setTimeout(r, 400)); return { ...ahri(q.lane ?? 'middle', settings.source), championId: q.championId, damage: DAMAGE[q.championId] ?? null, timeWr: settings.source === 'lolalytics' ? [47.6, 50.4, 52.1, 53.3, 51.8, 49.2, 46.9].map((v) => +(v + (q.championId % 5) * 0.4).toFixed(1)) : undefined } },
+    getBuild: async (q) => { await new Promise((r) => setTimeout(r, 400)); return { ...ahri(q.lane ?? 'middle', settings.source), championId: q.championId, damage: DAMAGE[q.championId] ?? null } },
     getRunePages: async (q) => {
       await new Promise((r) => setTimeout(r, 300))
       const runes = ahri(q.lane, settings.source).runes
@@ -260,6 +260,13 @@ export function installMock() {
           { kind: 'burst' as const, items: [it(3157, 54.1, 5200), it(3102, 53.1, 8200)] }
         ],
         vs: { championId: 254, items: [it(3157, 55.2, 2100), it(3102, 54.0, 640)] }
+      }
+    },
+    matchupDetail: async (_id, _lane, vsId) => {
+      await new Promise((r) => setTimeout(r, 400))
+      return {
+        pages: [{ wr: 54.2, n: 1830, vs: vsId, perks: [8112, 8139, 8138, 8135, 8226, 8210, 5005, 5008, 5001] }],
+        items: [{ id: 3157, wr: 56.1, n: 900 }, { id: 3118, wr: 53.2, n: 1500 }, { id: 3020, wr: 52.8, n: 1400 }, { id: 3089, wr: 55.0, n: 700 }]
       }
     },
     draftBench: async () => {
