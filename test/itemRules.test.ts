@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { arrangeSets, buildPath, enemyComp, setsDisturbed, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
+import { arrangeSets, buildPath, enemyComp, extraItems, setsDisturbed, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
 import { ccSeconds } from '../src/main/champTraits.ts'
 import type { StaticItem } from '../src/shared/types.ts'
 
@@ -41,6 +41,22 @@ test('teamAdvice: crowd control and healing, components allowed for anti-heal; n
   const rows = teamAdvice(pool, items, comp)
   assert.deepEqual(rows.map((r) => [r.kind, r.items.map((i) => i.id)]), [['tenacity', [3111]], ['antiheal', [3916, 3165]]])
   assert.deepEqual(teamAdvice(pool, items, enemyComp([], null)), [])
+})
+
+test('teamAdvice: two tanks ask for penetration, two assassins for burst protection; one is not enough', () => {
+  const its = { ...items, 3135: item(), 3036: item() } // Void Staff, Lord Dominik's
+  const pool = [s(3135, 2000), s(3157, 4000), s(3102, 800), s(3089, 9000)]
+  const two = enemyComp([{ championId: 54, role: 'Tank' }, { championId: 516, role: 'Tank' }, { championId: 238, role: 'Assassin' }, { championId: 91, role: 'Assassin' }], null)
+  assert.deepEqual(two.tanks, [54, 516])
+  assert.deepEqual(teamAdvice(pool, its, two).map((r) => [r.kind, r.items.map((i) => i.id)]), [['tank', [3135]], ['burst', [3157, 3102]]])
+  assert.deepEqual(teamAdvice(pool, its, enemyComp([{ championId: 54, role: 'Tank' }, { championId: 238, role: 'Assassin' }], null)), [])
+})
+
+test('extraItems: potions, Dark Seal, wards by purchases per game; rare ones and unknown items left out', () => {
+  const its = { ...items, 2003: item({ final: undefined }), 2055: item({ final: undefined }), 1082: item({ final: undefined }), 2139: item({ final: undefined }) }
+  const pool = [s(2003, 4000), s(2055, 2100), s(1082, 700, 55.5), s(2139, 30), s(2140, 900), s(3089, 9000)]
+  assert.deepEqual(extraItems(pool, 1000, its), [{ id: 2003, share: 4, wr: 51 }, { id: 2055, share: 2.1, wr: 51 }, { id: 1082, share: 0.7, wr: 55.5 }])
+  assert.deepEqual(extraItems(pool, 0, its), [])
 })
 
 test('vsItems: finished items bought against the laner that the popular path lacks', () => {

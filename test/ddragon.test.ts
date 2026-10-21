@@ -16,7 +16,7 @@ const files = {
 async function setup(serve: (url: string) => Response) {
   const cacheDir = await mkdtemp(join(tmpdir(), 'lolay-dd-'))
   await writeFile(join(cacheDir, 'version.json'), JSON.stringify({ version: '1.0.0' }))
-  await writeFile(join(cacheDir, 'static_1.0.0_tr_5.json'), '{}')
+  await writeFile(join(cacheDir, 'static_1.0.0_tr_6.json'), '{}')
   const real = globalThis.fetch
   globalThis.fetch = (async (url: string) => serve(String(url))) as typeof fetch
   return { cacheDir, restore: () => void (globalThis.fetch = real) }
@@ -28,7 +28,7 @@ test('a failed download keeps the old version and its static files', async () =>
     const dd = createDdragon({ cacheDir })
     await assert.rejects(dd.checkVersion('tr'))
     assert.equal(dd.version(), '1.0.0')
-    assert.ok(existsSync(join(cacheDir, 'static_1.0.0_tr_5.json')))
+    assert.ok(existsSync(join(cacheDir, 'static_1.0.0_tr_6.json')))
     assert.equal(JSON.parse(await readFile(join(cacheDir, 'version.json'), 'utf8')).version, '1.0.0')
   } finally {
     restore()
@@ -47,8 +47,8 @@ test('the new static data is written before the old files go', async () => {
     const dd = createDdragon({ cacheDir })
     assert.equal(await dd.checkVersion('tr'), true)
     assert.equal(dd.version(), '2.0.0')
-    assert.ok(existsSync(join(cacheDir, 'static_2.0.0_tr_5.json')))
-    assert.ok(!existsSync(join(cacheDir, 'static_1.0.0_tr_5.json')))
+    assert.ok(existsSync(join(cacheDir, 'static_2.0.0_tr_6.json')))
+    assert.ok(!existsSync(join(cacheDir, 'static_1.0.0_tr_6.json')))
     const data = await dd.getStatic('tr')
     assert.equal(data.runes[5008].name, 'Değişken Kuvvet')
     assert.match(data.runes[5008].icon, /statmodsadaptiveforceicon\.png$/)

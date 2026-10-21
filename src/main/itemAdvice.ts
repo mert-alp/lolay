@@ -24,7 +24,7 @@ export async function itemAdvice(championId: number, lane: Lane): Promise<ItemAd
     Promise.all(theirs.map((p) => getBuild({ championId: p.championId, lane: p.position ?? undefined }).catch(() => null))),
     getTierList(lane, tier).catch(() => ({}))
   ])
-  const comp = enemyComp(theirs.map((p, i) => ({ championId: p.championId, damage: foes[i]?.damage, heal: foes[i]?.heal })), cc)
+  const comp = enemyComp(theirs.map((p, i) => ({ championId: p.championId, damage: foes[i]?.damage, heal: foes[i]?.heal, role: st.champions[p.championId]?.role })), cc)
   // other sources have no full item list: their 4th-6th item options are the pool then
   const pool = mine.items ?? [...mine.boots, ...mine.item4, ...mine.item5, ...mine.item6]
   const { path: popular, boots } = buildPath(mine)

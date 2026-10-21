@@ -113,6 +113,7 @@ export interface StaticChampion {
   key: number // numeric champion id (103)
   id: string // ddragon id ("Ahri", "MonkeyKing") -> icon file `${id}.png`
   name: string
+  role?: string // first ddragon tag: "Tank", "Assassin", "Mage", ...
 }
 export interface StaticItem {
   name: string

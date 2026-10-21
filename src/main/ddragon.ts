@@ -6,7 +6,7 @@ import type { Lang, StaticData, StaticRune } from '../shared/types.ts'
 const CDN = 'https://ddragon.leagueoflegends.com'
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global'
 const LOCALE: Record<Lang, string> = { tr: 'tr_TR', en: 'en_US' }
-const REV = 5 // bump when StaticData changes shape: older cache files are refetched
+const REV = 6 // bump when StaticData changes shape: older cache files are refetched
 const CDRAGON_LOCALE: Record<Lang, string> = { tr: 'tr_tr', en: 'default' }
 
 async function json(url: string): Promise<any> {
@@ -23,7 +23,7 @@ async function fetchStatic(v: string, lang: Lang): Promise<StaticData> {
   ])
 
   const data: StaticData = { version: v, lang, champions: {}, items: {}, runes: {}, trees: [], spells: {} }
-  for (const c of Object.values<any>(champ.data)) data.champions[Number(c.key)] = { key: Number(c.key), id: c.id, name: c.name }
+  for (const c of Object.values<any>(champ.data)) data.champions[Number(c.key)] = { key: Number(c.key), id: c.id, name: c.name, ...(c.tags?.[0] && { role: c.tags[0] }) }
   for (const [id, i] of Object.entries<any>(item.data)) {
     const tags: string[] = i.tags ?? []
     const def = (['SpellBlock', 'Armor', 'Tenacity'] as const).filter((x) => tags.includes(x))

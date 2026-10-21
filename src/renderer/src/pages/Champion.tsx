@@ -8,7 +8,7 @@ import { SOURCE_NAME, fmtGames, fmtPct, gamePatch, tierColor as tierColorOf, wrC
 import { Button, Card, Eyebrow, Segmented } from '../components/ui'
 import { prefKey } from '@shared/prefs'
 import { RuneSection, saveRunePref } from '../components/RunePageCard'
-import { BuildItems } from '../components/BuildItems'
+import { BuildItems, useItemAdvice } from '../components/BuildItems'
 import { SkillOrder } from '../components/SkillOrder'
 import { SpellControl } from '../components/SpellPicker'
 import { ImportRow } from '../components/ImportRow'
@@ -71,6 +71,11 @@ export function Champion({ state, st, champId, followLane, onPick, onHome, toast
     }),
     []
   )
+  // champ select on the Rift with this champion: what to buy against the enemies picked so far
+  const sel = state.champSelect
+  const foes = (state.live?.enemyTeam ?? []).map((p) => p.championId).filter((id) => id > 0).sort().join()
+  const adviseOn = !!sel && !sel.aram && sel.championId === champId && champId > 0 && !!build
+  const advice = useItemAdvice(champId ?? 0, laneSel ?? build?.lane ?? 'middle', foes, adviseOn)
 
   if (!champId) {
     return (
@@ -258,7 +263,7 @@ export function Champion({ state, st, champId, followLane, onPick, onHome, toast
             </Card>
           </div>
 
-          <BuildItems build={fresh} st={st} action={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined} />
+          <BuildItems build={fresh} st={st} advice={adviseOn ? advice : undefined} action={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined} />
 
           <Card className="p-4">
             <Eyebrow>{t('counters.title')}</Eyebrow>

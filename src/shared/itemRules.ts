@@ -11,13 +11,23 @@ const PER_ROW = 3
 
 // ponytail: fixed id lists, edit when Riot adds or removes a Grievous Wounds / cleanse item
 export const ANTI_HEAL = [3165, 3033, 3123, 3075, 3076, 6609, 3916, 3011]
-const CLEANSE = [3140] // Quicksilver Sash has no Tenacity tag
+const CLEANSE = [3140, 3139] // Quicksilver Sash, Mercurial Scimitar: no Tenacity tag
+// armor / magic pen and %-health damage: Lord Dominik's, Mortal Reminder, Black Cleaver, Void Staff, Cryptbloom, Liandry's, BotRK, Serylda's, Terminus
+const ANTI_TANK = [3036, 3033, 3071, 3135, 3137, 6653, 3153, 6694, 3302]
+// survive a burst: Zhonya's, Banshee's, Guardian Angel, Maw, Sterak's, Edge of Night, Shieldbow
+const ANTI_BURST = [3157, 3102, 3026, 3156, 3053, 3814, 6673]
+// bought around the build, not in it: potions, Dark Seal / Cull, Control Ward, elixirs, trinket swaps
+export const EXTRAS = [2003, 2031, 2033, 1082, 1083, 2055, 2138, 2139, 2140, 3364, 3363]
+const MIN_EXTRA = 0.05 // bought in fewer than 5% of games: noise
+const GROUP = 2 // this many tanks / assassins among the enemies call for items against them
 
-export type AdviceKind = 'mr' | 'armor' | 'tenacity' | 'antiheal'
+export type AdviceKind = 'mr' | 'armor' | 'tenacity' | 'antiheal' | 'tank' | 'burst'
 export interface EnemyComp {
   pct: Damage | null // damage share of the known enemies
   cc: { total: number; avg: number; list: { championId: number; sec: number }[] } | null // seconds of CC, longest first; null = unknown
   healers: number[] // enemies healing STRONG_HEAL or more per game
+  tanks: number[] // enemies whose main class is Tank
+  assassins: number[]
 }
 export interface AdviceRow {
   kind: AdviceKind
@@ -32,13 +42,15 @@ export interface ItemAdvice {
   vs: { championId: number; items: ItemStat[] } | null // my laner (as the jungler: their jungler)
 }
 
-export function enemyComp(enemies: { championId: number; damage?: Damage | null; heal?: number }[], cc: Record<number, number> | null): EnemyComp {
+export function enemyComp(enemies: { championId: number; damage?: Damage | null; heal?: number; role?: string }[], cc: Record<number, number> | null): EnemyComp {
   const list = enemies.filter((e) => cc?.[e.championId] != null).map((e) => ({ championId: e.championId, sec: cc![e.championId] })).sort((a, b) => b.sec - a.sec)
   const total = +list.reduce((s, e) => s + e.sec, 0).toFixed(2)
   return {
     pct: teamDamage(enemies.map((e) => e.damage))?.pct ?? null,
     cc: list.length ? { total, avg: total / list.length, list } : null,
-    healers: enemies.filter((e) => (e.heal ?? 0) >= STRONG_HEAL).map((e) => e.championId)
+    healers: enemies.filter((e) => (e.heal ?? 0) >= STRONG_HEAL).map((e) => e.championId),
+    tanks: enemies.filter((e) => e.role === 'Tank').map((e) => e.championId),
+    assassins: enemies.filter((e) => e.role === 'Assassin').map((e) => e.championId)
   }
 }
 
@@ -77,7 +89,18 @@ export function teamAdvice(pool: ItemStat[], items: Record<number, StaticItem>, 
   if (comp.pct && comp.pct.physical >= ONE_SIDED) add('armor', pick((_, it) => !!it.def?.includes('Armor')))
   if (comp.cc && comp.cc.avg >= HIGH_CC) add('tenacity', pick((id, it) => !!it.def?.includes('Tenacity') || CLEANSE.includes(id)))
   if (comp.healers.length) add('antiheal', pick((id) => ANTI_HEAL.includes(id), false)) // Bramble / Oblivion Orb / Executioner's are components
+  if (comp.tanks.length >= GROUP) add('tank', pick((id) => ANTI_TANK.includes(id)))
+  if (comp.assassins.length >= GROUP) add('burst', pick((id) => ANTI_BURST.includes(id)))
   return rows
+}
+
+// potions, Dark Seal, wards, elixirs this champion buys: share = purchases per game, most bought first
+export function extraItems(pool: ItemStat[], games: number, items: Record<number, StaticItem>): { id: number; share: number; wr: number }[] {
+  if (!(games > 0)) return []
+  return pool
+    .filter((p) => EXTRAS.includes(p.id) && items[p.id] && p.n / games >= MIN_EXTRA)
+    .sort((a, b) => b.n - a.n)
+    .map((p) => ({ id: p.id, share: p.n / games, wr: p.wr }))
 }
 
 // what changes against one laner: finished items bought against them that the popular path does not have

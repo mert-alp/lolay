@@ -27,6 +27,7 @@ function ahri(lane: Lane, source: Source): Build {
     item4: [{ id: 3157, ...stat(55.1, 30000) }, { id: 3089, ...stat(54.2, 28000) }, { id: 3135, ...stat(53.0, 9000) }],
     item5: [{ id: 3089, ...stat(56.1, 20000) }, { id: 3135, ...stat(55.2, 15000) }, { id: 3157, ...stat(54.4, 11000) }],
     item6: [{ id: 3135, ...stat(57.0, 8000) }, { id: 3165, ...stat(56.1, 6000) }, { id: 3102, ...stat(55.3, 4000) }],
+    items: [{ id: 2003, wr: 52.6, n: 409968 }, { id: 2055, wr: 55.3, n: 210274 }, { id: 1082, wr: 55.5, n: 71484 }, { id: 2031, wr: 52.4, n: 69141 }, { id: 3364, wr: 55.2, n: 61605 }, { id: 3363, wr: 53.2, n: 55481 }, { id: 2139, wr: 55.1, n: 20062 }],
     skillPriority: 'QWE', skillOrder: 'WQEQQRQWQWRWWEE',
     counters: { strong: mu([13, 61, 69], 53), weak: mu([142, 1, 245], 47) },
     partial: false, fetchedAt: Date.now()
@@ -251,11 +252,12 @@ export function installMock() {
       const it = (id: number, wr: number, n: number) => ({ id, wr, n })
       return {
         enemies: 4,
-        comp: { pct: { physical: 27, magic: 64, true: 9 }, cc: { total: 7.6, avg: 1.9, list: [{ championId: 254, sec: 2.05 }, { championId: 51, sec: 1.5 }, { championId: 157, sec: 2 }, { championId: 11, sec: 0 }].sort((a, b) => b.sec - a.sec) }, healers: [11] },
+        comp: { pct: { physical: 27, magic: 64, true: 9 }, cc: { total: 7.6, avg: 1.9, list: [{ championId: 254, sec: 2.05 }, { championId: 51, sec: 1.5 }, { championId: 157, sec: 2 }, { championId: 11, sec: 0 }].sort((a, b) => b.sec - a.sec) }, healers: [11], tanks: [], assassins: [157, 11] },
         rows: [
           { kind: 'mr' as const, items: [it(3102, 53.1, 8200), it(3111, 51.9, 6100), it(4401, 52.4, 1200)] },
           { kind: 'tenacity' as const, items: [it(3111, 51.9, 6100), it(3140, 50.2, 400)] },
-          { kind: 'antiheal' as const, items: [it(3165, 52.8, 3100), it(3916, 51.0, 900)] }
+          { kind: 'antiheal' as const, items: [it(3165, 52.8, 3100), it(3916, 51.0, 900)] },
+          { kind: 'burst' as const, items: [it(3157, 54.1, 5200), it(3102, 53.1, 8200)] }
         ],
         vs: { championId: 254, items: [it(3157, 55.2, 2100), it(3102, 54.0, 640)] }
       }

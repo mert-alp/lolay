@@ -1,13 +1,29 @@
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { champIcon, type Build, type ItemStat, type StaticData } from '@shared/types'
-import { buildPath, HIGH_CC, MID_CC, ONE_SIDED, type AdviceKind, type ItemAdvice } from '@shared/itemRules'
+import { buildPath, extraItems, HIGH_CC, MID_CC, ONE_SIDED, type AdviceKind, type ItemAdvice } from '@shared/itemRules'
 import { useLang, useT, type Key } from '../i18n'
 import { toward } from '../util'
 import { Card, Eyebrow } from './ui'
 import { Arrow, ItemIcon, ItemSetRow } from './ItemIcon'
 
 const label = 'mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-mute'
-const ADVICE: Record<AdviceKind, Key> = { mr: 'adv.mr', armor: 'adv.armor', tenacity: 'adv.tenacity', antiheal: 'adv.antiheal' }
+const ADVICE: Record<AdviceKind, Key> = { mr: 'adv.mr', armor: 'adv.armor', tenacity: 'adv.tenacity', antiheal: 'adv.antiheal', tank: 'adv.tank', burst: 'adv.burst' }
+
+// what to buy against the enemy team / laner (champ select); null while it loads (the old answer stays until the new one is in)
+export function useItemAdvice(championId: number, lane: Build['lane'], foes: string, on: boolean) {
+  const [advice, setAdvice] = useState<{ key: string; v: ItemAdvice | null } | null>(null)
+  const key = `${championId}:${lane}`
+  useEffect(() => {
+    if (!on) return
+    let live = true
+    window.lolay.draftItemAdvice(championId, lane).then((v) => live && setAdvice({ key, v })).catch(() => {})
+    return () => { live = false }
+  }, [key, foes, on])
+  return advice?.key === key ? advice.v : null
+}
+
+// purchases per game: a Control Ward is bought several times, Dark Seal at most once
+const share = (s: number) => (s >= 1 ? `${s.toFixed(1)}×` : `${Math.round(s * 100)}%`)
 
 // the champion's own numbers for an item: the full Lolalytics list, else the 4th-6th item options
 const statOf = (b: Build, id: number): ItemStat | undefined => b.items?.find((i) => i.id === id) ?? [...b.boots, ...b.item4, ...b.item5, ...b.item6].find((i) => i.id === id)
@@ -48,6 +64,8 @@ function Advice({ advice, st }: { advice: ItemAdvice | null; st: StaticData }) {
               )}
               {cc && <Chip color={cc === 'adv.cc.high' ? '#f0c35a' : undefined} title={t('adv.ccTip')}>{t('adv.cc')}: {sec(comp.cc!.total)} · {t(cc)}</Chip>}
               {comp.healers.length > 0 && <Chip color="#4fb6b0" title={names(comp.healers)}>{t('adv.heal')}: {names(comp.healers)}</Chip>}
+              {comp.tanks.length > 0 && <Chip color={comp.tanks.length >= 2 ? '#c9a0ff' : undefined} title={names(comp.tanks)}>{t('adv.tanks')}: {names(comp.tanks)}</Chip>}
+              {comp.assassins.length > 0 && <Chip color={comp.assassins.length >= 2 ? '#ff8a65' : undefined} title={names(comp.assassins)}>{t('adv.assassins')}: {names(comp.assassins)}</Chip>}
             </div>
             {comp.cc && comp.cc.list.some((e) => e.sec > 0) && (
               <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
@@ -96,6 +114,7 @@ export function BuildItems({ build, st, action, advice }: { build: Build; st: St
   const t = useT()
   const { path, boots, options } = buildPath(build)
   const ordered = [...path.slice(0, 1), ...boots, ...path.slice(1)] // boots usually come after the first item
+  const extras = build.items ? extraItems(build.items, build.games, st.items) : []
   return (
     <Card className="p-4">
       <Eyebrow right={action}>{t('items.title')}</Eyebrow>
@@ -124,6 +143,19 @@ export function BuildItems({ build, st, action, advice }: { build: Build; st: St
           <div>
             <div className={label}>{t('items.options')}</div>
             <div className="flex gap-2.5">{options.map((id) => { const s = statOf(build, id); return <ItemIcon key={id} id={id} st={st} size={34} wr={s?.wr} n={s?.n} /> })}</div>
+          </div>
+        )}
+        {extras.length > 0 && (
+          <div>
+            <div className={label} title={t('items.extrasTip')}>{t('items.extras')}</div>
+            <div className="flex flex-wrap gap-2.5">
+              {extras.map((x) => (
+                <div key={x.id} className="flex flex-col items-center gap-1">
+                  <ItemIcon id={x.id} st={st} size={34} wr={x.wr} />
+                  <span className="text-[10px] leading-none text-mute">{share(x.share)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

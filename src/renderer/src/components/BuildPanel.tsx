@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { champIcon, TIME_BUCKETS, type ApplyRequest, type Build, type ChampSelectState, type Matchup, type Settings, type StaticData } from '@shared/types'
 import { useT } from '../i18n'
 import { fmtGames, fmtPct, wrColor } from '../util'
 import { Button, Card, Eyebrow } from './ui'
-import { BuildItems } from './BuildItems'
-import type { ItemAdvice } from '@shared/itemRules'
+import { BuildItems, useItemAdvice } from './BuildItems'
 import { prefKey } from '@shared/prefs'
 import { RuneSection, saveRunePref } from './RunePageCard'
 import { SkillOrder } from './SkillOrder'
@@ -81,19 +80,6 @@ interface Props {
 }
 
 // the full build of the hovered/locked champion, inline in the draft
-// what to buy against the enemy team / laner; null while it loads (the old answer stays until the new one is in)
-function useItemAdvice(championId: number, lane: Build['lane'], foes: string, on: boolean) {
-  const [advice, setAdvice] = useState<{ key: string; v: ItemAdvice | null } | null>(null)
-  const key = `${championId}:${lane}`
-  useEffect(() => {
-    if (!on) return
-    let live = true
-    window.lolay.draftItemAdvice(championId, lane).then((v) => live && setAdvice({ key, v })).catch(() => {})
-    return () => { live = false }
-  }, [key, foes, on])
-  return advice?.key === key ? advice.v : null
-}
-
 export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungler, enemyVs, foes, onApply, toast }: Props) {
   const t = useT()
   const advice = useItemAdvice(build.championId, build.lane, foes, !build.queue)
