@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { altBuilds, arrangeSets, buildPath, extraItems, setsDisturbed, type ItemAdvice } from '../shared/itemRules.ts'
 import { toward } from '../shared/text.ts'
 import type { ApplyRequest, ApplyResult, Build, Lang } from '../shared/types.ts'
+import { writeGameItemSet } from './gameItemSet.ts'
 import { itemAdvice } from './itemAdvice.ts'
 import { orderSpells } from '../shared/prefs.ts'
 import { request } from './lcu.ts'
@@ -91,8 +92,8 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
   const mine = {
       title,
       type: 'custom',
-      // 'any' like every other app's sets: mode CLASSIC hid the set in Practice Tool (mode PRACTICETOOL) and in the
-      // collection; associatedMaps still keeps the Rift build out of ARAM
+      // 'any' like every other app's sets: mode CLASSIC hid the set in Practice Tool (mode PRACTICETOOL);
+      // the LCU keeps the Rift build out of ARAM through associatedMaps
       map: 'any',
       mode: 'any',
       associatedChampions: [build.championId],
@@ -103,8 +104,15 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
       uid: randomUUID(),
       blocks
     }
-  await call('PUT', url, { accountId: current.accountId, itemSets: arrangeSets(current.itemSets, mine, (t) => ours(t)), timestamp: Date.now() })
-  void keepFirst(url, mine)
+  const [top, ...others] = arrangeSets(current.itemSets, mine, (t) => ours(t))
+  // in the game files with priority, else (League's folder unknown) through the LCU, ranked first
+  const dir = getSettings().installDir
+  const champ = st.champions[build.championId]?.id
+  // the game filters its files by `map`: the client writes SR / HA from associatedMaps, so the file does the same
+  const onDisk = !!dir && !!champ && (await writeGameItemSet(dir, champ, { ...top, map: build.queue ? 'HA' : 'SR' }).then(() => true, (e) => (console.error('item set file', e), false)))
+  // the LCU copy would show up a second time in the shop: on disk, the PUT only clears older LoLo and Blitz sets
+  await call('PUT', url, { accountId: current.accountId, itemSets: onDisk ? others : [top, ...others], timestamp: Date.now() })
+  if (!onDisk) void keepFirst(url, mine)
 }
 
 // Blitz writes its own set when the champion is locked, often a moment after us: look again a few times and take
