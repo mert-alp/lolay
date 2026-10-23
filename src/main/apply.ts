@@ -91,8 +91,10 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
   const mine = {
       title,
       type: 'custom',
-      map: build.queue ? 'HA' : 'SR',
-      mode: build.queue ? 'ARAM' : 'CLASSIC',
+      // 'any' like every other app's sets: mode CLASSIC hid the set in Practice Tool (mode PRACTICETOOL) and in the
+      // collection; associatedMaps still keeps the Rift build out of ARAM
+      map: 'any',
+      mode: 'any',
       associatedChampions: [build.championId],
       associatedMaps: [build.queue ? 12 : 11],
       preferredItemSlots: [],
