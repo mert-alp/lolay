@@ -103,6 +103,34 @@ export function extraItems(pool: ItemStat[], games: number, items: Record<number
     .map((p) => ({ id: p.id, share: p.n / games, wr: p.wr }))
 }
 
+export interface AltBuild {
+  kind: 'win' | 'core'
+  ids: number[] // in buying order
+  n: number
+  wr?: number // win-focused build only: Lolalytics' first-three-items rows have no win rate we can trust
+  perks?: number[] // win-focused build: the rune page Lolalytics shows with it
+}
+const ALT_CORES = 2
+
+// Other ways to build (Lolalytics only): the win-focused build with its rune page, then the most played first three
+// items whose non-boot items differ from every build above. Boots alone or the buying order are no other build.
+export function altBuilds(b: Pick<Build, 'core' | 'win' | 'cores'>, items: Record<number, StaticItem>): AltBuild[] {
+  const main = (ids: number[]) => ids.filter((id) => !items[id]?.boots).sort().join()
+  const seen = new Set([main(b.core?.ids ?? [])])
+  const out: AltBuild[] = []
+  const add = (a: AltBuild, core: number[]) => {
+    if (seen.has(main(core))) return
+    seen.add(main(core))
+    out.push(a)
+  }
+  if (b.win) add({ kind: 'win', ids: popularPath(b.win), wr: b.win.core.wr, n: b.win.core.n, perks: b.win.perks }, b.win.core.ids)
+  for (const c of b.cores ?? []) {
+    if (c.n < MIN_GAMES || out.filter((a) => a.kind === 'core').length >= ALT_CORES) break
+    if (new Set(c.ids).size === c.ids.length && c.ids.every((id) => items[id])) add({ kind: 'core', ids: c.ids, n: c.n }, c.ids)
+  }
+  return out
+}
+
 // what changes against one laner: finished items bought against them that the popular path does not have
 export function vsItems(vs: ItemStat[], items: Record<number, StaticItem>, path: number[], n = 4): ItemStat[] {
   return vs.filter((p) => p.n >= MIN_VS_GAMES && items[p.id]?.final && !path.includes(p.id)).sort((a, b) => b.n - a.n).slice(0, n)
@@ -110,11 +138,18 @@ export function vsItems(vs: ItemStat[], items: Record<number, StaticItem>, path:
 
 const BLITZ = /blitz/i // ponytail: Blitz sets are told apart by their title; a Blitz rename needs this updated
 
+type ItemSet = { title?: unknown; uid?: unknown; sortrank?: unknown }
+const rank = (s: ItemSet | undefined) => Number(s?.sortrank) || 0
+
 // The shop opens on the first item set of the champion: ours goes first and Blitz's go away.
-// Sets the user made by hand stay, after ours.
-export function arrangeSets<T extends { title?: unknown; uid?: unknown }>(sets: T[], mine: T, isOurs: (title: string) => boolean): T[] {
-  return [mine, ...sets.filter((s) => s.uid !== mine.uid && !isOurs(String(s.title)) && !BLITZ.test(String(s.title)))]
+// The client shows sets by sortrank, highest first: ours gets one above every other set. Hand-made sets stay, after ours.
+export function arrangeSets<T extends ItemSet>(sets: T[], mine: T, isOurs: (title: string) => boolean): T[] {
+  const others = sets.filter((s) => s.uid !== mine.uid && !isOurs(String(s.title)) && !BLITZ.test(String(s.title)))
+  return [{ ...mine, sortrank: Math.max(0, ...others.map(rank)) + 1 }, ...others]
 }
 
-// someone (Blitz) wrote after us: our set is no longer first, or a Blitz set is back
-export const setsDisturbed = (sets: { title?: unknown; uid?: unknown }[], uid: string) => sets[0]?.uid !== uid || sets.some((s) => BLITZ.test(String(s.title)))
+// someone (Blitz) wrote after us: our set is no longer first or no longer ranked highest, or a Blitz set is back
+export function setsDisturbed(sets: ItemSet[], uid: string): boolean {
+  const mine = sets.find((s) => s.uid === uid)
+  return sets[0]?.uid !== uid || sets.some((s) => BLITZ.test(String(s.title)) || (s !== mine && rank(s) >= rank(mine)))
+}

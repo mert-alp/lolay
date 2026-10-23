@@ -46,6 +46,9 @@ test('toBuild maps Ahri middle emerald_plus', () => {
   assert.ok(b.counters.strong.length > 0 && b.counters.weak.length > 0)
   assert.ok(b.counters.strong[0].wr >= b.counters.weak[0].wr)
   assert.equal(b.partial, false)
+  assert.equal(b.win?.perks.length, 9)
+  assert.equal(b.win?.core.ids.length, 3)
+  assert.ok(b.cores!.length > 5 && b.cores!.every((c, i, all) => c.ids.length === 3 && (i === 0 || all[i - 1].n >= c.n)))
 })
 
 test('champPathSlug is empty until a page is fetched', () => {

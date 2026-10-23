@@ -260,7 +260,7 @@ export function Champion({ state, st, champId, followLane, onPick, onHome, toast
             </Card>
           </div>
 
-          <BuildItems build={fresh} st={st} advice={adviseOn ? advice : undefined} action={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined} />
+          <BuildItems build={fresh} st={st} advice={adviseOn ? advice : undefined} onRunes={following ? (perks) => apply({ perks }, 'runes') : undefined} action={following ? <Button variant="ghost" className="!px-3 !py-1.5 !text-[12px]" onClick={() => apply({ items: true }, 'items')}>{t('items.import')}</Button> : undefined} />
 
           <Matchups build={fresh} st={st} enemyId={following ? state.live?.enemyTeam.find((p) => p.position && p.position === fresh.lane)?.championId : undefined} onPick={onPick} onApply={following ? (perks) => apply({ perks }, 'runes') : undefined} />
         </div>

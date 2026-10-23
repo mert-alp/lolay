@@ -10,7 +10,7 @@ const mu = (ids: number[], wr0: number): Matchup[] => ids.map((championId, i) =>
 
 function ahri(lane: Lane, source: Source): Build {
   return {
-    championId: 103, slug: 'ahri', lane, defaultLane: 'middle', tier: source === 'metasrc' ? 'all' : 'emerald_plus', source, patch: '16.20',
+    championId: 103, slug: 'ahri', lane, defaultLane: 'middle', tier: source === 'metasrc' ? 'all' : 'emerald_plus', source, patch: '16.21',
     wr: 51.84, pr: 9.6, br: 4.3, games: 165412, tierLabel: 'S',
     runes: [
       { ...stat(52.1, 98200), perks: [8112, 8139, 8140, 8106, 8226, 8210, 5005, 5008, 5001] },
@@ -28,6 +28,8 @@ function ahri(lane: Lane, source: Source): Build {
     item5: [{ id: 3089, ...stat(56.1, 20000) }, { id: 3135, ...stat(55.2, 15000) }, { id: 3157, ...stat(54.4, 11000) }],
     item6: [{ id: 3135, ...stat(57.0, 8000) }, { id: 3165, ...stat(56.1, 6000) }, { id: 3102, ...stat(55.3, 4000) }],
     items: [{ id: 2003, wr: 52.6, n: 409968 }, { id: 2055, wr: 55.3, n: 210274 }, { id: 1082, wr: 55.5, n: 71484 }, { id: 2031, wr: 52.4, n: 69141 }, { id: 3364, wr: 55.2, n: 61605 }, { id: 3363, wr: 53.2, n: 55481 }, { id: 2139, wr: 55.1, n: 20062 }],
+    win: { perks: [8992, 8226, 8210, 8237, 8106, 8139, 5008, 5010, 5011], core: { ids: [3118, 3158, 3100], ...stat(56.6, 1589) }, item4: [{ id: 3041, ...stat(78.1, 1467) }, { id: 4645, ...stat(57.5, 3431) }], item5: [{ id: 3089, ...stat(59.3, 2849) }], item6: [{ id: 3135, ...stat(55.7, 402) }] },
+    cores: [{ ids: [3118, 3020, 4645], n: 2372 }, { ids: [3118, 3020, 3100], n: 804 }, { ids: [3118, 3158, 3100], n: 473 }, { ids: [2503, 3158, 3100], n: 451 }, { ids: [2503, 3020, 3100], n: 424 }],
     skillPriority: 'QWE', skillOrder: 'WQEQQRQWQWRWWEE',
     counters: { strong: mu([13, 61, 69], 53), weak: mu([142, 1, 245], 47) },
     partial: false, fetchedAt: Date.now()
@@ -147,7 +149,7 @@ async function metaMock(q: MetaQuery, lang: 'tr' | 'en'): Promise<MetaResult> {
   const ranked = rows.filter((r) => r.rank > 0)
   const eligible = ranked.filter((r) => r.pr >= 1).sort((a, b) => b.dWr! - a.dWr!)
   return {
-    patch: '16.20', previousPatch: '16.19', rows: ranked,
+    patch: '16.21', previousPatch: '16.20', rows: ranked,
     movers: { kind: 'patch', up: eligible.slice(0, 5).map((r) => r.championId), down: eligible.slice(-5).reverse().map((r) => r.championId) }
   }
 }
@@ -213,7 +215,7 @@ export function installMock() {
       settings,
       lang: settings.lang ?? 'tr',
       tier: settings.tierOverride ?? 'emerald_plus',
-      dataVersion: '16.20.1'
+      dataVersion: '16.21.1'
     }
   }
   const emit = () => listeners.forEach((l) => l(state()))

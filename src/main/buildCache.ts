@@ -5,6 +5,7 @@ import { InsufficientDataError } from './providers/http.ts'
 
 const PARTIAL_TTL = 5 * 60 * 1000 // partial and insufficient builds are looked at again soon
 const PREFIX = 'build_' // keeps invalidate() away from version.json, static_* and champPath.json
+const REV = 2 // bump when Build gets new fields: cached builds of the old shape are not read again
 
 export interface CacheQuery {
   source: Source
@@ -63,7 +64,7 @@ export function createBuildCache(opts: { cacheDir: string; fetchBuild: (q: Cache
   const inflight = new Map<string, Promise<Build>>()
 
   const fileOf = (q: CacheQuery, lane: Lane | undefined) =>
-    `${PREFIX}${q.source}_${q.championId}_${q.queue ?? lane ?? 'default'}_${q.source === 'metasrc' ? 'all' : q.tier}.json` // metasrc ignores the rank filter
+    `${PREFIX}${REV}_${q.source}_${q.championId}_${q.queue ?? lane ?? 'default'}_${q.source === 'metasrc' ? 'all' : q.tier}.json` // metasrc ignores the rank filter
 
   function refresh(file: string, q: CacheQuery): Promise<Build> {
     let p = inflight.get(file)

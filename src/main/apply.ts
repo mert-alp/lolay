@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { arrangeSets, buildPath, setsDisturbed, type ItemAdvice } from '../shared/itemRules.ts'
+import { altBuilds, arrangeSets, buildPath, extraItems, setsDisturbed, type ItemAdvice } from '../shared/itemRules.ts'
 import { toward } from '../shared/text.ts'
 import type { ApplyRequest, ApplyResult, Build, Lang } from '../shared/types.ts'
 import { itemAdvice } from './itemAdvice.ts'
@@ -12,10 +12,10 @@ import { getState } from './state.ts'
 const PREFIX = 'LoLo'
 const OLD_PREFIX = 'Lolay' // pages and sets written before the rename are still ours to replace
 const ours = (name: unknown) => String(name).startsWith(PREFIX) || String(name).startsWith(OLD_PREFIX)
-const BLOCKS: Record<Lang, string[]> = {
-  tr: ['Başlangıç', 'Popüler Build', 'Seçenekler', 'Rakip Takıma Karşı', '{name} Karşı'], // same names as the build panel
-  en: ['Starting', 'Popular Build', 'Options', 'Vs Enemy Team', 'Vs {name}']
-}
+const BLOCKS = {
+  tr: { start: 'Başlangıç', extras: 'İksir, Totem ve Diğerleri', popular: 'Popüler Build', options: 'Seçenekler', win: 'Kazanma Odaklı ({rune})', core: 'Alternatif Build', team: 'Rakip Takıma Karşı', vs: '{name} Karşı' }, // same names as the build panel
+  en: { start: 'Starting', extras: 'Potions, Wards & More', popular: 'Popular Build', options: 'Options', win: 'Win-Focused ({rune})', core: 'Other Build', team: 'Vs Enemy Team', vs: 'Vs {name}' }
+} satisfies Record<Lang, Record<string, string>>
 
 const ok = (status: number) => status >= 200 && status < 300
 
@@ -71,13 +71,17 @@ const block = (type: string, ids: number[]) => {
 async function applyItems(build: Build, title: string, lang: Lang, advice: ItemAdvice | null): Promise<'skipped' | void> {
   const t = BLOCKS[lang]
   const { path, boots, options } = buildPath(build)
-  const vsName = advice?.vs && (await getStatic()).champions[advice.vs.championId]?.name
+  const st = await getStatic()
+  const vsName = advice?.vs && st.champions[advice.vs.championId]?.name
   const blocks = [
-    block(t[0], build.startItems[0]?.ids ?? []),
-    block(t[1], [...path.slice(0, 1), ...boots, ...path.slice(1)]), // boots usually come after the first item
-    block(t[2], options),
-    block(t[3], [...new Set(advice?.rows.flatMap((r) => r.items.map((i) => i.id)) ?? [])]),
-    block(vsName ? t[4].replace('{name}', toward(lang, vsName)) : '', advice?.vs?.items.map((i) => i.id) ?? [])
+    // both starting sets of the card: the first one whole, then what the second one adds (Doran's Shield vs Ring)
+    block(t.start, [...(build.startItems[0]?.ids ?? []), ...(build.startItems[1]?.ids ?? []).filter((id) => !build.startItems[0]?.ids.includes(id))]),
+    block(t.extras, build.items ? extraItems(build.items, build.games, st.items).map((x) => x.id) : []), // Dark Seal, potions, Control Ward, elixirs
+    block(t.popular, [...path.slice(0, 1), ...boots, ...path.slice(1)]), // boots usually come after the first item
+    block(t.options, options),
+    ...altBuilds(build, st.items).map((a) => block(a.kind === 'win' ? t.win.replace('{rune}', st.runes[a.perks![0]]?.name ?? '?') : t.core, a.ids)),
+    block(t.team, [...new Set(advice?.rows.flatMap((r) => r.items.map((i) => i.id)) ?? [])]),
+    block(vsName ? t.vs.replace('{name}', toward(lang, vsName)) : '', advice?.vs?.items.map((i) => i.id) ?? [])
   ].filter((b) => b.type && b.items.length)
   if (!blocks.length) return 'skipped' // keep the previous LoLo set instead of replacing it with an empty one
   const { summonerId } = (await call('GET', '/lol-summoner/v1/current-summoner')) as { summonerId: number }
@@ -92,7 +96,7 @@ async function applyItems(build: Build, title: string, lang: Lang, advice: ItemA
       associatedChampions: [build.championId],
       associatedMaps: [build.queue ? 12 : 11],
       preferredItemSlots: [],
-      sortrank: 0,
+      sortrank: 0, // arrangeSets ranks it above every other set (Porofessor writes 110008 and up)
       startedFrom: 'blank',
       uid: randomUUID(),
       blocks

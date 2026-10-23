@@ -90,6 +90,8 @@ export interface Build {
   queue?: 'aram' // an ARAM build: `lane` means nothing then
   items?: ItemStat[] // Lolalytics only: every item this champion builds, for item advice
   heal?: number // Lolalytics only: average healing per game
+  win?: { perks: number[]; core: SetStat; item4: ItemStat[]; item5: ItemStat[]; item6: ItemStat[] } // Lolalytics only: the win-focused build and the rune page shown with it
+  cores?: { ids: number[]; n: number }[] // Lolalytics only: the first three items (boots included) in buying order, most played first
   insufficient?: true // the source has too little data for this champion/lane/rank; every list is empty
   fetchedAt: number
 }

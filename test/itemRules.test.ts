@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { arrangeSets, buildPath, enemyComp, extraItems, setsDisturbed, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
+import { altBuilds, arrangeSets, buildPath, enemyComp, extraItems, setsDisturbed, popularPath, teamAdvice, vsItems } from '../src/shared/itemRules.ts'
 import { ccSeconds } from '../src/main/champTraits.ts'
 import type { StaticItem } from '../src/shared/types.ts'
 
@@ -80,10 +80,39 @@ test('ccSeconds: the longest CC of each ability at max rank, skins left out', ()
 
 test('arrangeSets: ours first, Blitz sets and older LoLo sets gone, hand-made sets kept', () => {
   const ours = (t: string) => t.startsWith('LoLo') || t.startsWith('Lolay')
-  const mine = { title: 'LoLo Ahri middle', uid: 'm' }
+  const mine = { title: 'LoLo Ahri middle', uid: 'm', sortrank: 1 }
   const sets = [{ title: 'Blitz.gg Ahri Mid', uid: 'b' }, { title: 'My Ahri', uid: 'u' }, { title: 'Lolay Ahri middle', uid: 'old' }]
   assert.deepEqual(arrangeSets(sets, mine, ours).map((x) => x.uid), ['m', 'u'])
   assert.equal(setsDisturbed([mine, { title: 'My Ahri', uid: 'u' }], 'm'), false)
   assert.equal(setsDisturbed([{ title: 'My Ahri', uid: 'u' }, mine], 'm'), true)
   assert.equal(setsDisturbed([mine, { title: 'BLITZ Ahri', uid: 'b' }], 'm'), true)
+})
+
+test('arrangeSets: ours ranked above every set left, a set ranked as high is a disturbance', () => {
+  const ours = (t: string) => t.startsWith('LoLo')
+  const sets = [{ title: 'My Ahri', uid: 'u', sortrank: 7 }, { title: 'LoLo Ahri old', uid: 'o', sortrank: 50 }]
+  const out = arrangeSets(sets, { title: 'LoLo Ahri middle', uid: 'm', sortrank: 0 }, ours)
+  assert.equal(out[0].sortrank, 8)
+  assert.equal(setsDisturbed(out, 'm'), false)
+  assert.equal(setsDisturbed([out[0], { title: 'Mobalytics Ahri', uid: 'x', sortrank: 8 }], 'm'), true)
+})
+
+test('altBuilds: win-focused build with its runes, then cores whose non-boot items differ; boots-only changes and rare cores left out', () => {
+  const its: Record<number, StaticItem> = { ...items, 3020: item({ boots: true }), 3158: item({ boots: true }), 3118: item(), 3100: item(), 2503: item() }
+  const b = {
+    core: { ids: [3118, 3020, 4645], wr: 53, n: 6000 },
+    win: { perks: [8992, 1, 2, 3, 4, 5, 6, 7, 8], core: { ids: [3118, 3158, 3100], wr: 56.6, n: 1500 }, item4: [s(3089, 900)], item5: [], item6: [] },
+    cores: [
+      { ids: [3118, 3158, 4645], n: 900 }, // the popular core with other boots
+      { ids: [3118, 3020, 3100], n: 800 }, // same items as the win build
+      { ids: [2503, 3020, 3100], n: 400 },
+      { ids: [2503, 3158, 3157], n: 300 },
+      { ids: [3118, 3089, 3157], n: 200 }, // a third core: over the limit
+      { ids: [3089, 3157, 3102], n: 50 }
+    ]
+  }
+  const out = altBuilds(b, its)
+  assert.deepEqual(out.map((a) => [a.kind, a.ids]), [['win', [3118, 3158, 3100, 3089]], ['core', [2503, 3020, 3100]], ['core', [2503, 3158, 3157]]])
+  assert.equal(out[0].perks?.[0], 8992)
+  assert.deepEqual(altBuilds({ core: null }, its), [])
 })

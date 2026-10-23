@@ -82,6 +82,7 @@ export function toBuild(d: any, tier: Tier): Build {
     if (!samePage(win, runes[0])) runes.push(win)
   }
   const core = pick.items?.core
+  const win = d.summary.win
   return {
     championId: h.cid,
     slug: champPathSlug(h.cid) ?? '',
@@ -112,6 +113,14 @@ export function toBuild(d: any, tier: Tier): Build {
     damage: h.damage ? { physical: Number(h.damage.physical) || 0, magic: Number(h.damage.magic) || 0, true: Number(h.damage.true) || 0 } : null,
     items: ((d.item ?? []) as any[]).map((r) => ({ id: r[0], wr: r[1], n: r[3] })), // [id, wr, pr, n, ...]
     heal: Number(((d.sidebar?.stats?.stats ?? []) as any[]).find((s) => s[0] === 'heal')?.[2]) || undefined,
+    win: win?.items?.core?.set && win.runes?.set
+      ? { perks: perksOf(win.runes).perks, core: { ids: win.items.core.set, wr: win.items.core.wr, n: win.items.core.n }, item4: items(win.items.item4), item5: items(win.items.item5), item6: items(win.items.item6) }
+      : undefined,
+    // "3118_3020_4645": [games, ...]
+    cores: Object.entries((d.itemSets?.itemBootSet3 ?? {}) as Record<string, number[]>)
+      .map(([k, v]) => ({ ids: k.split('_').map(Number), n: v[0] }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 20),
     partial: !core || !pick.skillorder?.id,
     fetchedAt: Date.now()
   }

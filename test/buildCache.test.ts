@@ -75,5 +75,5 @@ test('an ARAM build has its own cache file, apart from the Rift build of the sam
   await cache.getBuild({ ...q, lane: 'middle' })
   const aram = await cache.getBuild({ ...q, queue: 'aram' })
   assert.equal(aram.queue, 'aram')
-  assert.deepEqual((await readdir(cacheDir)).sort(), ['build_lolalytics_103_aram_emerald_plus.json', 'build_lolalytics_103_middle_emerald_plus.json'])
+  assert.deepEqual((await readdir(cacheDir)).sort(), ['build_2_lolalytics_103_aram_emerald_plus.json', 'build_2_lolalytics_103_middle_emerald_plus.json'])
 })

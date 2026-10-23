@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { champIcon, type Build, type ItemStat, type StaticData } from '@shared/types'
-import { buildPath, extraItems, HIGH_CC, MID_CC, ONE_SIDED, type AdviceKind, type ItemAdvice } from '@shared/itemRules'
+import { altBuilds, buildPath, extraItems, HIGH_CC, MID_CC, ONE_SIDED, type AdviceKind, type ItemAdvice } from '@shared/itemRules'
 import { useLang, useT, type Key } from '../i18n'
-import { toward } from '../util'
-import { Card, Eyebrow } from './ui'
+import { fmtGames, fmtPct, toward, wrColor } from '../util'
+import { Button, Card, Eyebrow } from './ui'
 import { Arrow, ItemIcon, ItemSetRow } from './ItemIcon'
 
 const label = 'mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-mute'
@@ -108,10 +108,11 @@ function Advice({ advice, st }: { advice: ItemAdvice | null; st: StaticData }) {
   )
 }
 
-// The items card: the popular build as one path, its options, and (champ select) advice against the enemy team.
-// advice: undefined = no advice section, null = loading
-export function BuildItems({ build, st, action, advice }: { build: Build; st: StaticData; action?: ReactNode; advice?: ItemAdvice | null }) {
+// The items card: the popular build as one path, its options, other builds, and (champ select) advice against the enemy team.
+// advice: undefined = no advice section, null = loading. onRunes: the win-focused build's rune page can be applied
+export function BuildItems({ build, st, action, advice, onRunes }: { build: Build; st: StaticData; action?: ReactNode; advice?: ItemAdvice | null; onRunes?: (perks: number[]) => void }) {
   const t = useT()
+  const alts = altBuilds(build, st.items)
   const { path, boots, options } = buildPath(build)
   const ordered = [...path.slice(0, 1), ...boots, ...path.slice(1)] // boots usually come after the first item
   const extras = build.items ? extraItems(build.items, build.games, st.items) : []
@@ -159,6 +160,39 @@ export function BuildItems({ build, st, action, advice }: { build: Build; st: St
           </div>
         )}
       </div>
+      {alts.length > 0 && (
+        <div className="mt-4 border-t border-line pt-3.5">
+          <div className={label}>{t('items.alts')}</div>
+          <div className="space-y-3">
+            {alts.map((a) => {
+              const rune = a.perks && st.runes[a.perks[0]]
+              return (
+                <div key={a.ids.join()} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <div className="flex w-[200px] items-center gap-2" title={t(a.kind === 'win' ? 'items.alt.winTip' : 'items.alt.coreTip')}>
+                    {rune && <img src={rune.icon} alt="" className="size-7 rounded-full bg-bg ring-1 ring-line" />}
+                    <div className="min-w-0">
+                      <div className="truncate text-[12px] font-semibold">{a.kind === 'win' ? rune?.name ?? t('items.alt.win') : t('items.alt.core')}</div>
+                      <div className="text-[11px] text-mute">
+                        {a.kind === 'win' && <>{t('items.alt.win')} · <span className={`font-semibold ${wrColor(a.wr)}`}>{fmtPct(a.wr)}</span> · </>}
+                        {fmtGames(a.n)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-start gap-x-2 gap-y-2">
+                    {a.ids.map((id, i) => (
+                      <Fragment key={id}>
+                        {i > 0 && <Arrow />}
+                        <ItemIcon id={id} st={st} size={42} />
+                      </Fragment>
+                    ))}
+                  </div>
+                  {a.perks && onRunes && <Button variant="ghost" className="!px-3 !py-1 !text-[12px]" onClick={() => onRunes(a.perks!)}>{t('items.alt.runes')}</Button>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
       {advice !== undefined && <div className="mt-4 border-t border-line pt-3.5"><Advice advice={advice} st={st} /></div>}
     </Card>
   )

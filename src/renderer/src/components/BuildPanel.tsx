@@ -76,6 +76,7 @@ export function BuildPanel({ build, st, cs, settings, enemyId, vsLaner, vsJungle
         build={build}
         st={st}
         advice={build.queue ? undefined : advice}
+        onRunes={(perks) => onApply({ perks }, 'runes')}
         action={<Button variant="ghost" className="!px-3 !py-1 !text-[12px]" onClick={() => onApply({ items: true }, 'items')}>{t('items.import')}</Button>}
       />
 
